@@ -1,44 +1,50 @@
-"use client"
+"use client";
 
-import { motion } from "framer-motion"
-import { QrCode, Fuel, Wallet, FileText, LogOut } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { useRouter } from "next/navigation"
+import { motion } from "framer-motion";
+import { QrCode, Fuel, Wallet, FileText, LogOut } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { useRouter } from "next/navigation";
 
 const modules = [
   {
     title: "Validar Requisição",
     description: "Leia o QR Code ou digite o código para iniciar.",
     icon: QrCode,
-    href: "/posto/validar",
+    href: "/empresas/validar",
     buttonText: "Iniciar",
   },
   {
     title: "Gestão de Combustíveis",
     description: "Atualize preços e tipos de combustíveis.",
     icon: Fuel,
-    href: "/posto/combustiveis",
+    href: "/empresas/combustiveis",
     buttonText: "Gerenciar",
   },
   {
     title: "Financeiro",
     description: "Acompanhe seus recebíveis e antecipações.",
     icon: Wallet,
-    href: "/posto/financeiro",
+    href: "/empresas/financeiro",
     buttonText: "Ver Extrato",
   },
   {
     title: "Relatórios Operacionais",
     description: "Visualize o volume de vendas e performance.",
     icon: FileText,
-    href: "/posto/relatorios",
+    href: "/empresas/relatorios",
     buttonText: "Gerar Relatório",
   },
-]
+];
 
 export default function PostoDashboard() {
-  const router = useRouter()
+  const router = useRouter();
 
   return (
     <div className="min-h-screen w-full bg-background">
@@ -59,8 +65,12 @@ export default function PostoDashboard() {
           transition={{ duration: 0.5 }}
           className="mb-8"
         >
-          <h2 className="text-4xl font-bold text-foreground mb-2">Dashboard Posto de Combustível</h2>
-          <p className="text-lg text-muted-foreground">Gerencia abastecimentos, preços e finanças do seu posto.</p>
+          <h2 className="text-4xl font-bold text-foreground mb-2">
+            Dashboard Posto de Combustível
+          </h2>
+          <p className="text-lg text-muted-foreground">
+            Gerencia abastecimentos, preços e finanças do seu posto.
+          </p>
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -79,10 +89,15 @@ export default function PostoDashboard() {
                     </div>
                   </div>
                   <CardTitle className="text-xl">{module.title}</CardTitle>
-                  <CardDescription className="text-sm pt-2">{module.description}</CardDescription>
+                  <CardDescription className="text-sm pt-2">
+                    {module.description}
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="text-center">
-                  <Button onClick={() => router.push(module.href)} className="w-full h-11">
+                  <Button
+                    onClick={() => router.push(module.href)}
+                    className="w-full h-11"
+                  >
                     {module.buttonText}
                   </Button>
                 </CardContent>
@@ -92,5 +107,5 @@ export default function PostoDashboard() {
         </div>
       </main>
     </div>
-  )
+  );
 }

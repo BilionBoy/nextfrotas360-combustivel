@@ -189,7 +189,7 @@ export default function ValidarRequisicao() {
         className="w-full max-w-2xl"
       >
         <div className="absolute top-4 left-4">
-          <Button variant="outline" onClick={() => router.push("/posto")}>
+          <Button variant="outline" onClick={() => router.push("/empresas")}>
             Voltar
           </Button>
         </div>

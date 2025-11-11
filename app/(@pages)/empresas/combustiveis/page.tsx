@@ -36,7 +36,7 @@ export default function GestaoCombustiveis() {
         className="max-w-6xl mx-auto"
       >
         <div className="flex justify-between items-center mb-6">
-          <Button variant="outline" onClick={() => router.push("/posto")}>
+          <Button variant="outline" onClick={() => router.push("/empresas")}>
             Voltar
           </Button>
 
