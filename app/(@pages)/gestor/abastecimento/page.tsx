@@ -1,10 +1,8 @@
 "use client";
 
-import type React from "react";
-
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Fuel, Plus, CheckCircle } from "lucide-react";
+import { Fuel, Plus, CheckCircle, FileDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,6 +30,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import QRCode from "qrcode";
+import { jsPDF } from "jspdf";
 import { RequisicoesTable } from "./components/RequisicoesTable";
 import { useRequisicoes } from "./hooks/useRequisicoes";
 import { requisicoesApi } from "./api/requisicoes";
@@ -80,32 +79,17 @@ export default function NovoAbastecimento() {
     setFormDataLoading(true);
     try {
       const [veiculosData, postosData, tiposData] = await Promise.all([
-        veiculosApi.getAll().catch((err) => {
-          console.error("[v0] Failed to load veiculos:", err);
-          return [];
-        }),
-        postosApi.getAll().catch((err) => {
-          console.error("[v0] Failed to load postos:", err);
-          return [];
-        }),
-        tiposCombustivelApi.getAll().catch((err) => {
-          console.error("[v0] Failed to load tipos combustivel:", err);
-          return [];
-        }),
+        veiculosApi.getAll().catch(() => []),
+        postosApi.getAll().catch(() => []),
+        tiposCombustivelApi.getAll().catch(() => []),
       ]);
-
-      console.log("[v0] Loaded veiculos:", veiculosData.length);
-      console.log("[v0] Loaded postos:", postosData.length);
-      console.log("[v0] Loaded tipos:", tiposData.length);
-
       setVeiculos(veiculosData);
       setPostos(postosData);
       setTiposCombustivel(tiposData);
-    } catch (error) {
-      console.error("[v0] Error loading form data:", error);
+    } catch {
       toast({
         title: "Erro ao carregar dados",
-        description: "Alguns dados podem não estar disponíveis",
+        description: "Alguns dados podem não estar disponíveis.",
         variant: "destructive",
       });
     } finally {
@@ -119,7 +103,6 @@ export default function NovoAbastecimento() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     try {
       const novaRequisicao = await requisicoesApi.create({
         g_veiculo_id: Number(formData.g_veiculo_id),
@@ -133,25 +116,55 @@ export default function NovoAbastecimento() {
         completar_tanque: formData.completar_tanque,
       });
 
-      const qrUrl = await QRCode.toDataURL(`REQ-${novaRequisicao.id}`);
+      const qrValue =
+        novaRequisicao.voucher_codigo || `REQ-${novaRequisicao.id}`;
+      const qrUrl = await QRCode.toDataURL(qrValue);
+
       setQrCodeUrl(qrUrl);
       setRequisicao(novaRequisicao);
       setIsSuccess(true);
-
       await refetch();
 
       toast({
         title: "Requisição Criada!",
-        description: "Sua requisição de abastecimento foi gerada com sucesso.",
+        description: "Voucher e QR Code gerados com sucesso.",
       });
     } catch (error) {
       console.error("[v0] Error creating requisition:", error);
       toast({
         title: "Erro ao criar requisição",
-        description: "Não foi possível criar a requisição",
+        description: "Não foi possível criar a requisição.",
         variant: "destructive",
       });
     }
+  };
+
+  const handleGeneratePDF = () => {
+    if (!requisicao) return;
+    const doc = new jsPDF();
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(18);
+    doc.text("VOUCHER DE ABASTECIMENTO", 105, 20, { align: "center" });
+    doc.setFontSize(12);
+    doc.text(`Código: ${requisicao.voucher_codigo}`, 20, 40);
+    doc.text(`Posto: ${requisicao.c_posto?.nome_fantasia || "-"}`, 20, 50);
+    doc.text(`Veículo: ${requisicao.g_veiculo?.placa || "-"}`, 20, 60);
+    doc.text(
+      `Combustível: ${requisicao.c_tipo_combustivel?.descricao || "-"}`,
+      20,
+      70
+    );
+    doc.text(`Status: ${requisicao.voucher_status}`, 20, 80);
+    doc.text(
+      `Validade: ${
+        requisicao.voucher_validade
+          ? new Date(requisicao.voucher_validade).toLocaleString("pt-BR")
+          : "-"
+      }`,
+      20,
+      90
+    );
+    doc.save(`voucher-${requisicao.voucher_codigo || requisicao.id}.pdf`);
   };
 
   const handleNewRequest = () => {
@@ -170,12 +183,11 @@ export default function NovoAbastecimento() {
     setShowForm(false);
   };
 
-  const handleEdit = (req: CRequisicaoCombustivel) => {
+  const handleEdit = (req: CRequisicaoCombustivel) =>
     toast({
       title: "Em desenvolvimento",
-      description: "Funcionalidade de edição será implementada em breve",
+      description: "Funcionalidade de edição será implementada em breve.",
     });
-  };
 
   const handleDelete = async (id: number) => {
     try {
@@ -183,13 +195,12 @@ export default function NovoAbastecimento() {
       await refetch();
       toast({
         title: "Requisição excluída",
-        description: "A requisição foi excluída com sucesso",
+        description: "A requisição foi excluída com sucesso.",
       });
-    } catch (error) {
-      console.error("[v0] Error deleting requisition:", error);
+    } catch {
       toast({
         title: "Erro ao excluir",
-        description: "Não foi possível excluir a requisição",
+        description: "Não foi possível excluir a requisição.",
         variant: "destructive",
       });
     }
@@ -222,7 +233,7 @@ export default function NovoAbastecimento() {
           <CardHeader>
             <CardTitle>Histórico de Requisições</CardTitle>
             <CardDescription>
-              Visualize e gerencie suas requisições de abastecimento
+              Visualize e gerencie suas requisições de abastecimento.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -239,7 +250,7 @@ export default function NovoAbastecimento() {
         </Card>
       </motion.div>
 
-      {/* Dialog para criar nova requisição */}
+      {/* Dialog de criação */}
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
@@ -251,6 +262,7 @@ export default function NovoAbastecimento() {
               Preencha os dados para gerar uma nova requisição.
             </DialogDescription>
           </DialogHeader>
+
           {formDataLoading ? (
             <div className="text-center py-8">
               Carregando dados do formulário...
@@ -258,6 +270,7 @@ export default function NovoAbastecimento() {
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
+                {/* Veículo */}
                 <div className="space-y-2">
                   <Label htmlFor="g_veiculo_id">Veículo</Label>
                   <Select
@@ -271,24 +284,16 @@ export default function NovoAbastecimento() {
                       <SelectValue placeholder="Selecione o veículo" />
                     </SelectTrigger>
                     <SelectContent>
-                      {veiculos.length === 0 ? (
-                        <SelectItem value="none" disabled>
-                          Nenhum veículo disponível
+                      {veiculos.map((v) => (
+                        <SelectItem key={v.id} value={v.id.toString()}>
+                          {v.placa} - {v.marca} {v.modelo}
                         </SelectItem>
-                      ) : (
-                        veiculos.map((veiculo) => (
-                          <SelectItem
-                            key={veiculo.id}
-                            value={veiculo.id.toString()}
-                          >
-                            {veiculo.placa} - {veiculo.marca} {veiculo.modelo}
-                          </SelectItem>
-                        ))
-                      )}
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
 
+                {/* Posto */}
                 <div className="space-y-2">
                   <Label htmlFor="c_posto_id">Posto</Label>
                   <Select
@@ -300,24 +305,16 @@ export default function NovoAbastecimento() {
                       <SelectValue placeholder="Selecione o posto" />
                     </SelectTrigger>
                     <SelectContent>
-                      {postos.length === 0 ? (
-                        <SelectItem value="none" disabled>
-                          Nenhum posto disponível
+                      {postos.map((p) => (
+                        <SelectItem key={p.id} value={p.id.toString()}>
+                          {p.nome_fantasia}
                         </SelectItem>
-                      ) : (
-                        postos.map((posto) => (
-                          <SelectItem
-                            key={posto.id}
-                            value={posto.id.toString()}
-                          >
-                            {posto.nome_fantasia}
-                          </SelectItem>
-                        ))
-                      )}
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
 
+                {/* Tipo combustível */}
                 <div className="space-y-2">
                   <Label htmlFor="c_tipo_combustivel_id">Combustível</Label>
                   <Select
@@ -331,21 +328,16 @@ export default function NovoAbastecimento() {
                       <SelectValue placeholder="Selecione o combustível" />
                     </SelectTrigger>
                     <SelectContent>
-                      {tiposCombustivel.length === 0 ? (
-                        <SelectItem value="none" disabled>
-                          Nenhum combustível disponível
+                      {tiposCombustivel.map((t) => (
+                        <SelectItem key={t.id} value={t.id.toString()}>
+                          {t.descricao}
                         </SelectItem>
-                      ) : (
-                        tiposCombustivel.map((tipo) => (
-                          <SelectItem key={tipo.id} value={tipo.id.toString()}>
-                            {tipo.descricao}
-                          </SelectItem>
-                        ))
-                      )}
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
 
+                {/* KM Atual */}
                 <div className="space-y-2">
                   <Label htmlFor="km_atual">KM Atual</Label>
                   <Input
@@ -357,7 +349,8 @@ export default function NovoAbastecimento() {
                   />
                 </div>
 
-                <div className="space-y-2 col-span-2">
+                {/* Destino */}
+                <div className="col-span-2 space-y-2">
                   <Label htmlFor="destino">Destino</Label>
                   <Input
                     id="destino"
@@ -367,6 +360,7 @@ export default function NovoAbastecimento() {
                   />
                 </div>
 
+                {/* Litros / Completar */}
                 <div className="space-y-2">
                   <Label htmlFor="quantidade_litros">Quantidade (Litros)</Label>
                   <Input
@@ -382,7 +376,7 @@ export default function NovoAbastecimento() {
                   />
                 </div>
 
-                <div className="space-y-2 flex items-end">
+                <div className="flex items-end">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
@@ -406,15 +400,7 @@ export default function NovoAbastecimento() {
                 >
                   Cancelar
                 </Button>
-                <Button
-                  type="submit"
-                  className="flex-1"
-                  disabled={
-                    veiculos.length === 0 ||
-                    postos.length === 0 ||
-                    tiposCombustivel.length === 0
-                  }
-                >
+                <Button type="submit" className="flex-1">
                   <CheckCircle className="mr-2 h-5 w-5" />
                   Gerar Requisição
                 </Button>
@@ -424,7 +410,7 @@ export default function NovoAbastecimento() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog de sucesso com QR Code */}
+      {/* Modal de sucesso */}
       <Dialog open={isSuccess} onOpenChange={setIsSuccess}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -436,25 +422,22 @@ export default function NovoAbastecimento() {
               Apresente este QR Code no posto selecionado.
             </DialogDescription>
           </DialogHeader>
+
           {requisicao && (
             <div className="space-y-6 py-4">
               <div className="text-center">
                 <p className="text-sm text-muted-foreground mb-2">
-                  Código da Requisição
+                  Código do Voucher
                 </p>
                 <p className="text-3xl font-bold text-primary tracking-wider">
-                  REQ-{requisicao.id}
+                  {requisicao.voucher_codigo || `REQ-${requisicao.id}`}
                 </p>
               </div>
 
               {qrCodeUrl && (
                 <div className="flex justify-center">
                   <div className="p-4 bg-white rounded-lg">
-                    <img
-                      src={qrCodeUrl || "/placeholder.svg"}
-                      alt="QR Code"
-                      className="w-48 h-48"
-                    />
+                    <img src={qrCodeUrl} alt="QR Code" className="w-48 h-48" />
                   </div>
                 </div>
               )}
@@ -480,28 +463,25 @@ export default function NovoAbastecimento() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Status:</span>
-                  <span className="font-medium">
-                    {requisicao.o_status?.descricao || "Pendente"}
+                  <span className="font-medium capitalize">
+                    {requisicao.voucher_status || "pendente"}
                   </span>
                 </div>
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex gap-2 pt-2">
                 <Button
                   variant="outline"
                   onClick={handleNewRequest}
-                  className="flex-1 bg-transparent"
+                  className="flex-1"
                 >
                   Nova Requisição
                 </Button>
                 <Button
-                  onClick={() => {
-                    setIsSuccess(false);
-                    setShowForm(false);
-                  }}
-                  className="flex-1"
+                  onClick={handleGeneratePDF}
+                  className="flex-1 flex items-center justify-center gap-2"
                 >
-                  Fechar
+                  <FileDown className="w-4 h-4" /> Baixar PDF
                 </Button>
               </div>
             </div>

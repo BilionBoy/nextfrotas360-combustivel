@@ -30,6 +30,18 @@ export const requisicoesApi = {
     }),
 
   delete: async (id: number): Promise<void> => {
-    await fetch(`/api/v1/requisicoes/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/v1/requisicoes/${id}`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Erro ao excluir requisição: ${text}`);
+    }
+
+    return;
   },
 };

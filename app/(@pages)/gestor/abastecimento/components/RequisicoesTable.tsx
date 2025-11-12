@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, CheckCircle, Clock, XCircle } from "lucide-react";
 import type { CRequisicaoCombustivel } from "@/@types/RequisicaoCombustivel";
 
 interface RequisicoesTableProps {
@@ -23,11 +23,46 @@ export function RequisicoesTable({
     );
   }
 
+  const getVoucherStatusBadge = (status?: string) => {
+    switch (status?.toLowerCase()) {
+      case "validado":
+        return (
+          <span className="flex items-center gap-1 px-2 py-1 rounded text-xs bg-green-100 text-green-800 font-medium">
+            <CheckCircle className="h-3.5 w-3.5" /> Validado
+          </span>
+        );
+      case "pendente":
+        return (
+          <span className="flex items-center gap-1 px-2 py-1 rounded text-xs bg-yellow-100 text-yellow-800 font-medium">
+            <Clock className="h-3.5 w-3.5" /> Pendente
+          </span>
+        );
+      case "expirado":
+        return (
+          <span className="flex items-center gap-1 px-2 py-1 rounded text-xs bg-gray-200 text-gray-700 font-medium">
+            <XCircle className="h-3.5 w-3.5" /> Expirado
+          </span>
+        );
+      case "cancelado":
+        return (
+          <span className="flex items-center gap-1 px-2 py-1 rounded text-xs bg-red-100 text-red-800 font-medium">
+            <XCircle className="h-3.5 w-3.5" /> Cancelado
+          </span>
+        );
+      default:
+        return (
+          <span className="flex items-center gap-1 px-2 py-1 rounded text-xs bg-blue-100 text-blue-800 font-medium">
+            <Clock className="h-3.5 w-3.5" /> {status || "Desconhecido"}
+          </span>
+        );
+    }
+  };
+
   return (
     <div className="overflow-x-auto">
-      <table className="w-full">
+      <table className="w-full border-collapse">
         <thead>
-          <tr className="border-b">
+          <tr className="border-b bg-muted/40">
             <th className="text-left p-3 font-semibold">Veículo</th>
             <th className="text-left p-3 font-semibold">Posto</th>
             <th className="text-left p-3 font-semibold">Combustível</th>
@@ -46,14 +81,19 @@ export function RequisicoesTable({
                 {req.c_tipo_combustivel?.descricao || "-"}
               </td>
               <td className="p-3">{req.valor_total_formatado || "-"}</td>
+
               <td className="p-3">
-                <span className="px-2 py-1 rounded text-xs bg-blue-100 text-blue-800">
-                  {req.o_status?.descricao || "Pendente"}
-                </span>
+                {getVoucherStatusBadge(
+                  req.voucher_status || req.o_status?.descricao
+                )}
               </td>
+
               <td className="p-3">
-                {new Date(req.data_emissao).toLocaleDateString("pt-BR")}
+                {req.data_emissao
+                  ? new Date(req.data_emissao).toLocaleDateString("pt-BR")
+                  : "-"}
               </td>
+
               <td className="p-3">
                 <div className="flex gap-2 justify-center">
                   <Button variant="ghost" size="sm" onClick={() => onEdit(req)}>
