@@ -1,23 +1,35 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { veiculosApi } from "../api/veiculos"
-import type { Veiculo } from "@/@types/Veiculo"
+import { useEffect, useState } from "react";
+import { veiculosApi } from "../api/veiculos";
+import type { GVeiculo } from "@/@types/Veiculo";
 
 export function useVeiculos() {
-  const [veiculos, setVeiculos] = useState<Veiculo[]>([])
-  const [loading, setLoading] = useState(true)
+  const [veiculos, setVeiculos] = useState<GVeiculo[]>([]);
+  const [loading, setLoading] = useState(true);
 
   async function fetchVeiculos() {
-    setLoading(true)
-    const data = await veiculosApi.getAll()
-    setVeiculos(data)
-    setLoading(false)
+    try {
+      setLoading(true);
+
+      const data = await veiculosApi.getAll();
+
+      setVeiculos(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("[v0] Erro ao carregar veículos:", error);
+      setVeiculos([]);
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
-    fetchVeiculos()
-  }, [])
+    fetchVeiculos();
+  }, []);
 
-  return { veiculos, loading, refetch: fetchVeiculos }
+  return {
+    veiculos,
+    loading,
+    refetch: fetchVeiculos,
+  };
 }

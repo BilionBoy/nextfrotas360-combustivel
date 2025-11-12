@@ -1,9 +1,8 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Car, Edit, Trash2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table"
+import { useState } from "react";
+import { Car, Edit, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -13,73 +12,127 @@ import {
   DialogFooter,
   DialogTrigger,
   DialogClose,
-} from "@/components/ui/dialog"
-import type { Veiculo } from "@/@types/Veiculo"
-import VeiculoForm from "./VeiculoForm"
-import { veiculosApi } from "../api/veiculos"
-import { useToast } from "@/hooks/use-toast"
+} from "@/components/ui/dialog";
+
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableHead,
+  TableRow,
+  TableCell,
+} from "@/components/ui/table";
+
+import VeiculoForm from "./VeiculoForm";
+import type { GVeiculo } from "@/@types/Veiculo";
+import { veiculosApi } from "../api/veiculos";
+import { useToast } from "@/hooks/use-toast";
 
 interface VeiculosTableProps {
-  veiculos: Veiculo[]
-  onRefetch: () => void
+  veiculos: GVeiculo[];
+  onRefetch: () => void;
 }
 
-export default function VeiculosTable({ veiculos, onRefetch }: VeiculosTableProps) {
-  const { toast } = useToast()
-  const [isEditOpen, setIsEditOpen] = useState(false)
-  const [isDeleteOpen, setIsDeleteOpen] = useState(false)
-  const [selectedVeiculo, setSelectedVeiculo] = useState<Veiculo | null>(null)
+export default function VeiculosTable({
+  veiculos,
+  onRefetch,
+}: VeiculosTableProps) {
+  const { toast } = useToast();
 
-  const handleEdit = async (veiculo: Veiculo) => {
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [selectedVeiculo, setSelectedVeiculo] = useState<GVeiculo | null>(null);
+
+  async function handleEdit(data: GVeiculo) {
     try {
-      await veiculosApi.update(veiculo.id, veiculo)
-      toast({ title: "Sucesso!", description: "Veículo atualizado com sucesso." })
-      setIsEditOpen(false)
-      onRefetch()
-    } catch (error) {
-      toast({ title: "Erro!", description: "Falha ao atualizar veículo.", variant: "destructive" })
+      await veiculosApi.update(data.id, data);
+      toast({
+        title: "Sucesso!",
+        description: "Veículo atualizado com sucesso!",
+      });
+      setIsEditOpen(false);
+      onRefetch();
+    } catch (err) {
+      toast({
+        title: "Erro ao atualizar",
+        description: "Não foi possível atualizar o veículo.",
+        variant: "destructive",
+      });
     }
   }
 
-  const handleDelete = async (id: number) => {
+  async function handleDelete(id: number) {
     try {
-      await veiculosApi.delete(id)
-      toast({ title: "Sucesso!", description: "Veículo excluído com sucesso.", variant: "destructive" })
-      setIsDeleteOpen(false)
-      onRefetch()
-    } catch (error) {
-      toast({ title: "Erro!", description: "Falha ao excluir veículo.", variant: "destructive" })
+      await veiculosApi.delete(id);
+      toast({
+        title: "Excluído",
+        description: "Veículo removido com sucesso!",
+        variant: "destructive",
+      });
+      setIsDeleteOpen(false);
+      onRefetch();
+    } catch (err) {
+      toast({
+        title: "Erro ao excluir",
+        description: "Não foi possível excluir o veículo.",
+        variant: "destructive",
+      });
     }
   }
 
   return (
-    <div className="bg-card border border-border rounded-lg shadow-md overflow-hidden">
+    <div className="bg-card border border-border rounded-lg shadow-md overflow-auto">
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Placa</TableHead>
             <TableHead>Modelo</TableHead>
-            <TableHead>Combustível</TableHead>
+            <TableHead>Marca</TableHead>
+            <TableHead>Cor</TableHead>
             <TableHead>Ano</TableHead>
+            <TableHead>KM</TableHead>
+
+            <TableHead>Status</TableHead>
+            <TableHead>Tipo de Veículo</TableHead>
+            <TableHead>Unidade</TableHead>
+            <TableHead>Centro de Custo</TableHead>
+
             <TableHead className="text-right">Ações</TableHead>
           </TableRow>
         </TableHeader>
+
         <TableBody>
-          {veiculos.map((veiculo) => (
-            <TableRow key={veiculo.id}>
+          {veiculos.map((v) => (
+            <TableRow key={v.id}>
               <TableCell className="font-medium flex items-center gap-2">
                 <Car className="h-4 w-4 text-primary" />
-                {veiculo.placa}
+                {v.placa}
               </TableCell>
-              <TableCell>{veiculo.modelo}</TableCell>
-              <TableCell>{veiculo.tipo_combustivel?.descricao || "-"}</TableCell>
-              <TableCell>{veiculo.ano}</TableCell>
+
+              <TableCell>{v.modelo || "-"}</TableCell>
+              <TableCell>{v.marca || "-"}</TableCell>
+              <TableCell>{v.cor || "-"}</TableCell>
+              <TableCell>{v.ano || "-"}</TableCell>
+              <TableCell>{v.km_atual || "-"}</TableCell>
+
+              <TableCell>
+                <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">
+                  {v.a_status?.descricao || "-"}
+                </span>
+              </TableCell>
+
+              <TableCell>{v.g_tipo_veiculo?.descricao || "-"}</TableCell>
+              <TableCell>{v.a_unidade?.nome_fantasia || "-"}</TableCell>
+              <TableCell>{v.g_centro_custo?.nome || "-"}</TableCell>
+
+              {/* AÇÕES */}
               <TableCell className="text-right">
+                {/* EDITAR */}
                 <Dialog
-                  open={isEditOpen && selectedVeiculo?.id === veiculo.id}
+                  open={isEditOpen && selectedVeiculo?.id === v.id}
                   onOpenChange={(open) => {
-                    if (!open) setSelectedVeiculo(null)
-                    setIsEditOpen(open)
+                    if (!open) setSelectedVeiculo(null);
+                    setIsEditOpen(open);
                   }}
                 >
                   <DialogTrigger asChild>
@@ -87,23 +140,28 @@ export default function VeiculosTable({ veiculos, onRefetch }: VeiculosTableProp
                       variant="ghost"
                       size="icon"
                       onClick={() => {
-                        setSelectedVeiculo(veiculo)
-                        setIsEditOpen(true)
+                        setSelectedVeiculo(v);
+                        setIsEditOpen(true);
                       }}
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
                   </DialogTrigger>
+
                   <DialogContent>
-                    <VeiculoForm veiculo={selectedVeiculo || undefined} onSave={handleEdit} />
+                    <VeiculoForm
+                      veiculo={selectedVeiculo || undefined}
+                      onSave={handleEdit}
+                    />
                   </DialogContent>
                 </Dialog>
 
+                {/* EXCLUIR */}
                 <Dialog
-                  open={isDeleteOpen && selectedVeiculo?.id === veiculo.id}
+                  open={isDeleteOpen && selectedVeiculo?.id === v.id}
                   onOpenChange={(open) => {
-                    if (!open) setSelectedVeiculo(null)
-                    setIsDeleteOpen(open)
+                    if (!open) setSelectedVeiculo(null);
+                    setIsDeleteOpen(open);
                   }}
                 >
                   <DialogTrigger asChild>
@@ -111,28 +169,35 @@ export default function VeiculosTable({ veiculos, onRefetch }: VeiculosTableProp
                       variant="ghost"
                       size="icon"
                       onClick={() => {
-                        setSelectedVeiculo(veiculo)
-                        setIsDeleteOpen(true)
+                        setSelectedVeiculo(v);
+                        setIsDeleteOpen(true);
                       }}
                     >
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </DialogTrigger>
+
                   <DialogContent>
                     <DialogHeader>
-                      <DialogTitle>Confirmar Exclusão</DialogTitle>
+                      <DialogTitle>Confirmar exclusão</DialogTitle>
                       <DialogDescription>
-                        Tem certeza que deseja excluir o veículo &quot;{selectedVeiculo?.placa}&quot;? Esta ação não
+                        Deseja realmente excluir o veículo{" "}
+                        <strong>{selectedVeiculo?.placa}</strong>? Essa ação não
                         pode ser desfeita.
                       </DialogDescription>
                     </DialogHeader>
+
                     <DialogFooter>
                       <DialogClose asChild>
                         <Button variant="secondary">Cancelar</Button>
                       </DialogClose>
+
                       <Button
                         variant="destructive"
-                        onClick={() => selectedVeiculo?.id && handleDelete(selectedVeiculo.id)}
+                        onClick={() =>
+                          selectedVeiculo?.id &&
+                          handleDelete(selectedVeiculo.id)
+                        }
                       >
                         Excluir
                       </Button>
@@ -145,5 +210,5 @@ export default function VeiculosTable({ veiculos, onRefetch }: VeiculosTableProp
         </TableBody>
       </Table>
     </div>
-  )
+  );
 }
