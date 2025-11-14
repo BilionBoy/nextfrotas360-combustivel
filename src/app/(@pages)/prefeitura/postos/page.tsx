@@ -72,7 +72,7 @@ export default function PostosPrecos() {
         className="max-w-7xl mx-auto"
       >
         <div className="flex items-center gap-4 mb-6">
-          <Button variant="outline" onClick={() => router.push("/gestor")}>
+          <Button variant="outline" onClick={() => router.push("/prefeitura")}>
             Voltar
           </Button>
           <h1 className="text-3xl md:text-4xl font-bold text-foreground">

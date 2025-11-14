@@ -70,7 +70,7 @@ export default function RelatoriosGestor() {
       >
         <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
           <div className="flex items-center gap-4">
-            <Button variant="outline" onClick={() => router.push("/gestor")}>
+            <Button variant="outline" onClick={() => router.push("/prefeitura")}>
               Voltar
             </Button>
             <h1 className="text-3xl md:text-4xl font-bold text-foreground">

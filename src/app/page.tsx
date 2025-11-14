@@ -31,7 +31,7 @@ export default function LoginPage() {
     if (email.includes("posto") || email === "posto@nextfuel.com") {
       router.push("/empresas");
     } else if (email.includes("gestor") || email === "gestor@nextfuel.com") {
-      router.push("/gestor");
+      router.push("/prefeitura");
     } else if (email.includes("admin") || email === "admin@nextfuel.com") {
       router.push("/admin");
     } else {
