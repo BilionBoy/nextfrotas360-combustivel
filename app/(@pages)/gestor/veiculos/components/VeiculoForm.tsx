@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react"; // <-- IMPORTANTE
+
 import { Save } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import {
   DialogHeader,
@@ -10,6 +12,7 @@ import {
   DialogDescription,
   DialogClose,
 } from "@/components/ui/dialog";
+
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -21,7 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import type { GVeiculo } from "@/@types/Veiculo";
+import type { GVeiculo, CreateGVeiculoDTO } from "@/@types/Veiculo";
 import type { OStatus } from "@/@types/Status";
 import type { GTipoVeiculo } from "@/@types/TipoVeiculo";
 import type { AUnidade } from "@/@types/Unidade";
@@ -32,9 +35,104 @@ import { tiposVeiculoApi } from "../api/tiposVeiculo";
 import { unidadesApi } from "../api/unidades";
 import { centrosCustoApi } from "../api/centrosCusto";
 
+// =========================================================
+// INPUT GROUP
+// =========================================================
+
+interface InputGroupProps {
+  label: string;
+  icon?: React.ReactNode; // <--- CORRIGIDO
+  value: string;
+  placeholder?: string;
+  required?: boolean;
+  onChange: (value: string) => void;
+}
+
+function InputGroup({
+  label,
+  icon,
+  value,
+  placeholder,
+  required = false,
+  onChange,
+}: InputGroupProps) {
+  return (
+    <div className="flex flex-col gap-1">
+      <Label className="text-xs flex items-center gap-1 opacity-70">
+        {icon}
+        {label}
+      </Label>
+
+      <Input
+        value={value}
+        required={required}
+        placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)}
+        className="h-9 text-sm"
+      />
+    </div>
+  );
+}
+
+// =========================================================
+// SELECT GROUP
+// =========================================================
+
+interface SelectGroupProps<T> {
+  label: string;
+  icon?: React.ReactNode; // <--- CORRIGIDO
+  value: string;
+  items: T[];
+  displayKey: keyof T;
+  valueKey: keyof T;
+  placeholder?: string;
+  onChange: (value: string) => void;
+}
+
+function SelectGroup<T extends Record<string, any>>({
+  label,
+  icon,
+  value,
+  items,
+  displayKey,
+  valueKey,
+  placeholder,
+  onChange,
+}: SelectGroupProps<T>) {
+  return (
+    <div className="flex flex-col gap-1">
+      <Label className="text-xs flex items-center gap-1 opacity-70">
+        {icon}
+        {label}
+      </Label>
+
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger className="h-9 text-sm">
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+
+        <SelectContent>
+          {items.map((item) => (
+            <SelectItem
+              key={String(item[valueKey])}
+              value={String(item[valueKey])}
+            >
+              {String(item[displayKey])}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+// =========================================================
+// FORM PRINCIPAL
+// =========================================================
+
 interface VeiculoFormProps {
   veiculo?: GVeiculo;
-  onSave: (veiculo: GVeiculo) => void;
+  onSave: (data: CreateGVeiculoDTO) => void;
 }
 
 export default function VeiculoForm({ veiculo, onSave }: VeiculoFormProps) {
@@ -59,9 +157,9 @@ export default function VeiculoForm({ veiculo, onSave }: VeiculoFormProps) {
     g_centro_custo_id: veiculo?.g_centro_custo?.id?.toString() || "",
   });
 
-  // -----------------------------
-  // LOAD SELECT OPTIONS
-  // -----------------------------
+  // =========================================================
+  // LOAD OPTIONS
+  // =========================================================
   useEffect(() => {
     async function loadFormOptions() {
       const [status, tipos, unid, cent] = await Promise.all([
@@ -80,18 +178,17 @@ export default function VeiculoForm({ veiculo, onSave }: VeiculoFormProps) {
     loadFormOptions();
   }, []);
 
-  // -----------------------------
+  // =========================================================
   // HANDLERS
-  // -----------------------------
-  const handleChange = (name: string, value: string | number | boolean) => {
-    setFormData((prev) => ({ ...prev, [name]: value }));
+  // =========================================================
+  const handleChange = (key: keyof typeof formData, value: string) => {
+    setFormData((prev) => ({ ...prev, [key]: value }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    onSave({
-      ...veiculo,
+    const payload: CreateGVeiculoDTO = {
       placa: formData.placa,
       chassi: formData.chassi,
       renavam: formData.renavam,
@@ -105,211 +202,122 @@ export default function VeiculoForm({ veiculo, onSave }: VeiculoFormProps) {
       g_tipo_veiculo_id: Number(formData.g_tipo_veiculo_id),
       a_unidade_id: Number(formData.a_unidade_id),
       g_centro_custo_id: Number(formData.g_centro_custo_id),
-    } as GVeiculo);
+    };
+
+    onSave(payload);
   };
 
-  // -----------------------------
+  // =========================================================
   // VIEW
-  // -----------------------------
+  // =========================================================
   return (
     <form onSubmit={handleSubmit}>
       <DialogHeader>
-        <DialogTitle>
-          {veiculo ? "Editar Veículo" : "Adicionar Novo Veículo"}
+        <DialogTitle className="text-xl font-semibold">
+          {veiculo ? "Editar Veículo" : "Novo Veículo"}
         </DialogTitle>
-        <DialogDescription>
-          Preencha os dados do veículo da frota.
+        <DialogDescription className="text-sm opacity-70">
+          Preencha os dados do veículo.
         </DialogDescription>
       </DialogHeader>
 
-      <div className="grid gap-4 py-4">
-        {/* PLACA */}
-        <div className="grid grid-cols-4 items-center gap-4">
-          <Label htmlFor="placa" className="text-right">
-            Placa
-          </Label>
-          <Input
-            id="placa"
-            className="col-span-3"
-            value={formData.placa}
-            onChange={(e) => handleChange("placa", e.target.value)}
-            required
-          />
-        </div>
+      <div className="grid grid-cols-2 gap-4 py-4">
+        <InputGroup
+          label="Placa"
+          placeholder="ABC-1234"
+          value={formData.placa}
+          onChange={(v) => handleChange("placa", v)}
+        />
 
-        {/* CHASSI */}
-        <div className="grid grid-cols-4 items-center gap-4">
-          <Label htmlFor="chassi" className="text-right">
-            Chassi
-          </Label>
-          <Input
-            id="chassi"
-            className="col-span-3"
-            value={formData.chassi}
-            onChange={(e) => handleChange("chassi", e.target.value)}
-          />
-        </div>
+        <InputGroup
+          label="Chassi"
+          placeholder="Número do chassi"
+          value={formData.chassi}
+          onChange={(v) => handleChange("chassi", v)}
+        />
 
-        {/* RENAVAM */}
-        <div className="grid grid-cols-4 items-center gap-4">
-          <Label htmlFor="renavam" className="text-right">
-            Renavam
-          </Label>
-          <Input
-            id="renavam"
-            className="col-span-3"
-            value={formData.renavam}
-            onChange={(e) => handleChange("renavam", e.target.value)}
-          />
-        </div>
+        <InputGroup
+          label="Renavam"
+          placeholder="Renavam"
+          value={formData.renavam}
+          onChange={(v) => handleChange("renavam", v)}
+        />
 
-        {/* MODELO */}
-        <div className="grid grid-cols-4 items-center gap-4">
-          <Label htmlFor="modelo" className="text-right">
-            Modelo
-          </Label>
-          <Input
-            id="modelo"
-            className="col-span-3"
-            value={formData.modelo}
-            onChange={(e) => handleChange("modelo", e.target.value)}
-            required
-          />
-        </div>
+        <InputGroup
+          label="Modelo"
+          placeholder="Ex: Ranger"
+          required
+          value={formData.modelo}
+          onChange={(v) => handleChange("modelo", v)}
+        />
 
-        {/* MARCA */}
-        <div className="grid grid-cols-4 items-center gap-4">
-          <Label htmlFor="marca" className="text-right">
-            Marca
-          </Label>
-          <Input
-            id="marca"
-            className="col-span-3"
-            value={formData.marca}
-            onChange={(e) => handleChange("marca", e.target.value)}
-          />
-        </div>
+        <InputGroup
+          label="Marca"
+          placeholder="Ex: Ford"
+          value={formData.marca}
+          onChange={(v) => handleChange("marca", v)}
+        />
 
-        {/* COR */}
-        <div className="grid grid-cols-4 items-center gap-4">
-          <Label htmlFor="cor" className="text-right">
-            Cor
-          </Label>
-          <Input
-            id="cor"
-            className="col-span-3"
-            value={formData.cor}
-            onChange={(e) => handleChange("cor", e.target.value)}
-          />
-        </div>
+        <InputGroup
+          label="Cor"
+          placeholder="Ex: Preto"
+          value={formData.cor}
+          onChange={(v) => handleChange("cor", v)}
+        />
 
-        {/* ANO */}
-        <div className="grid grid-cols-4 items-center gap-4">
-          <Label htmlFor="ano" className="text-right">
-            Ano
-          </Label>
-          <Input
-            id="ano"
-            type="number"
-            className="col-span-3"
-            value={formData.ano}
-            onChange={(e) => handleChange("ano", e.target.value)}
-            required
-          />
-        </div>
+        <InputGroup
+          label="Ano"
+          placeholder="2025"
+          value={formData.ano}
+          onChange={(v) => handleChange("ano", v)}
+        />
 
-        {/* KM ATUAL */}
-        <div className="grid grid-cols-4 items-center gap-4">
-          <Label htmlFor="km_atual" className="text-right">
-            Km Atual
-          </Label>
-          <Input
-            id="km_atual"
-            className="col-span-3"
-            value={formData.km_atual}
-            onChange={(e) => handleChange("km_atual", e.target.value)}
-          />
-        </div>
+        <InputGroup
+          label="Km Atual"
+          placeholder="Ex: 12.450"
+          value={formData.km_atual}
+          onChange={(v) => handleChange("km_atual", v)}
+        />
 
-        {/* STATUS */}
-        <div className="grid grid-cols-4 items-center gap-4">
-          <Label className="text-right">Status</Label>
-          <Select
-            value={formData.a_status_id}
-            onValueChange={(v) => handleChange("a_status_id", v)}
-          >
-            <SelectTrigger className="col-span-3">
-              <SelectValue placeholder="Selecione" />
-            </SelectTrigger>
-            <SelectContent>
-              {statusList.map((s) => (
-                <SelectItem key={s.id} value={s.id.toString()}>
-                  {s.descricao}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <SelectGroup<OStatus>
+          label="Status"
+          placeholder="Selecione"
+          value={formData.a_status_id}
+          items={statusList}
+          valueKey="id"
+          displayKey="descricao"
+          onChange={(v) => handleChange("a_status_id", v)}
+        />
 
-        {/* TIPO VEÍCULO */}
-        <div className="grid grid-cols-4 items-center gap-4">
-          <Label className="text-right">Tipo de Veículo</Label>
-          <Select
-            value={formData.g_tipo_veiculo_id}
-            onValueChange={(v) => handleChange("g_tipo_veiculo_id", v)}
-          >
-            <SelectTrigger className="col-span-3">
-              <SelectValue placeholder="Selecione" />
-            </SelectTrigger>
-            <SelectContent>
-              {tiposVeiculo.map((t) => (
-                <SelectItem key={t.id} value={t.id.toString()}>
-                  {t.descricao}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <SelectGroup<GTipoVeiculo>
+          label="Tipo de Veículo"
+          placeholder="Selecione"
+          value={formData.g_tipo_veiculo_id}
+          items={tiposVeiculo}
+          valueKey="id"
+          displayKey="descricao"
+          onChange={(v) => handleChange("g_tipo_veiculo_id", v)}
+        />
 
-        {/* UNIDADE */}
-        <div className="grid grid-cols-4 items-center gap-4">
-          <Label className="text-right">Unidade</Label>
-          <Select
-            value={formData.a_unidade_id}
-            onValueChange={(v) => handleChange("a_unidade_id", v)}
-          >
-            <SelectTrigger className="col-span-3">
-              <SelectValue placeholder="Selecione" />
-            </SelectTrigger>
-            <SelectContent>
-              {unidades.map((u) => (
-                <SelectItem key={u.id} value={u.id.toString()}>
-                  {u.nome_fantasia}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <SelectGroup<AUnidade>
+          label="Unidade"
+          placeholder="Selecione"
+          value={formData.a_unidade_id}
+          items={unidades}
+          valueKey="id"
+          displayKey="nome_fantasia"
+          onChange={(v) => handleChange("a_unidade_id", v)}
+        />
 
-        {/* CENTRO DE CUSTO */}
-        <div className="grid grid-cols-4 items-center gap-4">
-          <Label className="text-right">Centro de Custo</Label>
-          <Select
-            value={formData.g_centro_custo_id}
-            onValueChange={(v) => handleChange("g_centro_custo_id", v)}
-          >
-            <SelectTrigger className="col-span-3">
-              <SelectValue placeholder="Selecione" />
-            </SelectTrigger>
-            <SelectContent>
-              {centros.map((c) => (
-                <SelectItem key={c.id} value={c.id.toString()}>
-                  {c.nome}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <SelectGroup<GCentroCusto>
+          label="Centro de Custo"
+          placeholder="Selecione"
+          value={formData.g_centro_custo_id}
+          items={centros}
+          valueKey="id"
+          displayKey="nome"
+          onChange={(v) => handleChange("g_centro_custo_id", v)}
+        />
       </div>
 
       <DialogFooter>
