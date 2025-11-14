@@ -1,3 +1,5 @@
+// src/app/(@pages)/gestor/abastecimento/hooks/useRequisicoes.ts
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -13,8 +15,8 @@ export function useRequisicoes() {
       setLoading(true);
       const data = await requisicoesApi.getAll();
       setRequisicoes(data);
-    } catch (error) {
-      console.error("[v0] Error fetching requisicoes:", error);
+    } catch (err) {
+      console.error("Erro ao carregar requisicoes:", err);
     } finally {
       setLoading(false);
     }
