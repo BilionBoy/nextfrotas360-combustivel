@@ -12,6 +12,9 @@ import {
 } from "@/src/components/ui/card";
 import { useRouter } from "next/navigation";
 
+// 🔒 Proteção por tipo de usuário
+import { useProtectedRoute } from "@/src/hooks/useProtectedRoute";
+
 const modules = [
   {
     title: "Validar Requisição",
@@ -45,6 +48,13 @@ const modules = [
 
 export default function PostoDashboard() {
   const router = useRouter();
+
+  // 🔐 Somente fornecedor/posto pode acessar
+  const { authorized } = useProtectedRoute({
+    allowed: ["fornecedor"],
+  });
+
+  if (!authorized) return null;
 
   return (
     <div className="min-h-screen w-full bg-background">
@@ -93,6 +103,7 @@ export default function PostoDashboard() {
                     {module.description}
                   </CardDescription>
                 </CardHeader>
+
                 <CardContent className="text-center">
                   <Button
                     onClick={() => router.push(module.href)}

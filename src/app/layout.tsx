@@ -3,7 +3,9 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
+
 import { Toaster } from "@/src/components/ui/toaster";
+import { AuthProvider } from "@/src/context/AuthContext";
 
 const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
@@ -12,7 +14,7 @@ export const metadata: Metadata = {
   title: "NEXTFUEL360 - Sistema de Gestão de Combustível",
   description:
     "Plataforma completa de gestão de combustível para postos e frotas",
-  generator: "v0.app",
+  generator: "NEXTFUEL360",
   icons: {
     icon: [
       {
@@ -34,13 +36,12 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="pt-BR">
-      <body className={`font-sans antialiased`}>
-        {children}
+      <body className="font-sans antialiased">
+        <AuthProvider>{children}</AuthProvider>
+
         <Toaster />
         <Analytics />
       </body>

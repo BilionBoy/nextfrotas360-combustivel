@@ -1,4 +1,3 @@
-// src/lib/api.ts
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 type HttpMethod = "GET" | "POST" | "PUT" | "DELETE";
@@ -9,7 +8,7 @@ interface RequestOptions {
   headers?: HeadersInit;
 }
 
-/** Tipo base de todas as respostas da API */
+/** Tipo base usado pelo restante da API */
 export interface ApiResponse<T = any> {
   status: string;
   message?: string;
@@ -26,7 +25,6 @@ export class AuthError extends Error {
   }
 }
 
-/** Token helpers — centralizam onde o token fica */
 export function getToken(): string | null {
   try {
     if (typeof window === "undefined") return null;
@@ -40,21 +38,20 @@ export function setToken(token: string) {
   try {
     if (typeof window === "undefined") return;
     localStorage.setItem("token", token);
-  } catch {
-    /* ignore */
-  }
+  } catch {}
 }
 
 export function clearToken() {
   try {
     if (typeof window === "undefined") return;
     localStorage.removeItem("token");
-  } catch {
-    /* ignore */
-  }
+  } catch {}
 }
 
-/** request principal */
+/* ============================================================
+   REQUEST PADRÃO (retorna ApiResponse<T>)
+   Usado em TODA A API EXCETO LOGIN
+============================================================ */
 async function request<T = any>(
   endpoint: string,
   options: RequestOptions = {}
@@ -72,66 +69,61 @@ async function request<T = any>(
     ...(body ? { body: JSON.stringify(body) } : {}),
   };
 
-  console.log("[v0] API Request:", {
+  console.log("[v0] API Request:", { url: `${BASE_URL}${endpoint}`, method });
+
+  const res = await fetch(`${BASE_URL}${endpoint}`, config);
+
+  console.log("[v0] API Response:", {
     url: `${BASE_URL}${endpoint}`,
-    method,
-    hasBody: !!body,
+    status: res.status,
+    ok: res.ok,
   });
 
-  try {
-    const res = await fetch(`${BASE_URL}${endpoint}`, config);
-
-    console.log("[v0] API Response:", {
-      url: `${BASE_URL}${endpoint}`,
-      status: res.status,
-      ok: res.ok,
-    });
-
-    // Tratamento especial auth
-    if (res.status === 401 || res.status === 403) {
-      // tenta extrair mensagem do body
-      let errMsg = "Não autorizado";
-      try {
-        const errData = await res.json();
-        errMsg = errData.message || errMsg;
-      } catch {
-        // fallback: status text
-        errMsg = res.statusText || errMsg;
-      }
-      throw new AuthError(errMsg, res.status);
-    }
-
-    if (!res.ok) {
-      let errorMsg = `Erro na API: ${res.status}`;
-      try {
-        const errorData = await res.json();
-        errorMsg = errorData.message || errorMsg;
-      } catch {
-        const textError = await res.text();
-        errorMsg = textError || errorMsg;
-      }
-      throw new Error(errorMsg);
-    }
-
-    const data = await res.json();
-    console.log("[v0] API Data received:", data);
-    return data as ApiResponse<T>;
-  } catch (error: any) {
-    console.error("[v0] API Error:", error);
-    if (error instanceof TypeError && error.message.includes("fetch")) {
-      throw new Error(
-        "Não foi possível conectar à API. Verifique se o servidor está rodando em " +
-          BASE_URL
-      );
-    }
-    throw error;
+  if (res.status === 401 || res.status === 403) {
+    let msg = "Não autorizado";
+    try {
+      const json = await res.json();
+      msg = json.message || msg;
+    } catch {}
+    throw new AuthError(msg, res.status);
   }
+
+  if (!res.ok) {
+    let msg = `Erro na API (${res.status})`;
+    try {
+      const json = await res.json();
+      msg = json.message || msg;
+    } catch {}
+    throw new Error(msg);
+  }
+
+  const data = await res.json();
+  return data as ApiResponse<T>;
+}
+
+/*  Usado EXCLUSIVAMENTE PARA LOGIN =*/
+async function requestRaw(endpoint: string, body: any) {
+  console.log("[v0] API Raw Request:", endpoint);
+
+  const res = await fetch(`${BASE_URL}${endpoint}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || `Erro ${res.status}`);
+  }
+
+  return await res.json();
 }
 
 export const api = {
-  get: <T = any>(endpoint: string) => request<T>(endpoint, { method: "GET" }),
+  get: <T = any>(endpoint: string) => request<T>(endpoint),
   post: <T = any>(endpoint: string, body: any) =>
     request<T>(endpoint, { method: "POST", body }),
+  postRaw: (endpoint: string, body: any) => requestRaw(endpoint, body),
   put: <T = any>(endpoint: string, body: any) =>
     request<T>(endpoint, { method: "PUT", body }),
   delete: <T = any>(endpoint: string) =>
