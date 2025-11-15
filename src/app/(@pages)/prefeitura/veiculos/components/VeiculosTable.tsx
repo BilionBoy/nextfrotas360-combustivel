@@ -78,7 +78,7 @@ export default function VeiculosTable({
       toast({
         title: "Excluído",
         description: "Veículo removido com sucesso!",
-        variant: "destructive",
+        variant: "success",
       });
 
       setIsDeleteOpen(false);

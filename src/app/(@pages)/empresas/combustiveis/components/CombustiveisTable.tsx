@@ -1,4 +1,3 @@
-// app/@pages/posto/combustiveis/components/CombustiveisTable.tsx
 "use client";
 
 import { Fuel, Edit, Trash2 } from "lucide-react";
@@ -26,6 +25,7 @@ import { CombustivelForm } from "./CombustivelForm";
 import type { CCombustivel } from "@/src/@types/Combustivel";
 import type { CTipoCombustivel } from "@/src/@types/TipoCombustivel";
 import { useState } from "react";
+import { useToast } from "@/src/components/ui/use-toast";
 
 interface Props {
   combustiveis: CCombustivel[];
@@ -43,6 +43,8 @@ export function CombustiveisTable({
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+
+  const { toast } = useToast();
 
   const getTipoNome = (id: number) =>
     tiposCombustivel.find((t) => t.id === id)?.descricao || "—";
@@ -87,13 +89,16 @@ export function CombustiveisTable({
                 <Fuel className="h-4 w-4 text-primary" />
                 {getTipoNome(c.c_tipo_combustivel_id)}
               </TableCell>
+
               <TableCell>
                 {new Intl.NumberFormat("pt-BR", {
                   style: "currency",
                   currency: "BRL",
                 }).format(Number(c.preco ?? 0))}
               </TableCell>
+
               <TableCell>{formatDate(c.validade)}</TableCell>
+
               <TableCell className="text-right flex justify-end gap-2">
                 {/* Editar */}
                 <Dialog
@@ -112,6 +117,7 @@ export function CombustiveisTable({
                       <Edit className="h-4 w-4" />
                     </Button>
                   </DialogTrigger>
+
                   <DialogContent>
                     <CombustivelForm
                       combustivel={c}
@@ -139,6 +145,7 @@ export function CombustiveisTable({
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </DialogTrigger>
+
                   <DialogContent>
                     <DialogHeader>
                       <DialogTitle>Confirmar exclusão</DialogTitle>
@@ -148,13 +155,35 @@ export function CombustiveisTable({
                         Esta ação não pode ser desfeita.
                       </DialogDescription>
                     </DialogHeader>
+
                     <DialogFooter>
                       <DialogClose asChild>
                         <Button variant="secondary">Cancelar</Button>
                       </DialogClose>
+
                       <Button
                         variant="destructive"
-                        onClick={() => c.id && onDelete(c.id)}
+                        onClick={() => {
+                          onDelete(c.id!)
+                            .then(() => {
+                              toast({
+                                variant: "success", // ✔ SUCESSO AQUI!
+                                title: "Excluído",
+                                description:
+                                  "Combustível removido com sucesso!",
+                              });
+
+                              setIsDeleteOpen(false);
+                            })
+                            .catch(() => {
+                              toast({
+                                variant: "destructive",
+                                title: "Erro ao excluir",
+                                description:
+                                  "Não foi possível remover o combustível.",
+                              });
+                            });
+                        }}
                       >
                         Excluir
                       </Button>

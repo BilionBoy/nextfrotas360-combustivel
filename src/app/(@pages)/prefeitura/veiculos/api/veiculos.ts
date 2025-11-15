@@ -4,6 +4,7 @@ import {
   createItem,
   updateItem,
 } from "@/src/lib/fetchApi";
+import { api } from "@/src/lib/api";
 
 import type { GVeiculo, CreateGVeiculoDTO } from "@/src/@types/Veiculo";
 
@@ -29,6 +30,6 @@ export const veiculosApi = {
 
   /** Exclui */
   delete: async (id: number): Promise<void> => {
-    await fetch(`/api/v1/veiculos/${id}`, { method: "DELETE" });
+    await api.delete(`/api/v1/veiculos/${id}`);
   },
 };

@@ -4,7 +4,11 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { PlusCircle } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
-import { Dialog, DialogContent, DialogTrigger } from "@/src/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+} from "@/src/components/ui/dialog";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/src/components/ui/use-toast";
 
@@ -55,7 +59,10 @@ export default function MeusVeiculosPage() {
         {/* Cabeçalho */}
         <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
           <div className="flex items-center gap-4">
-            <Button variant="outline" onClick={() => router.push("/prefeitura")}>
+            <Button
+              variant="outline"
+              onClick={() => router.push("/prefeitura")}
+            >
               Voltar
             </Button>
 

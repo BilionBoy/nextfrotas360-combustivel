@@ -1,11 +1,12 @@
-// src/app/(@pages)/gestor/abastecimento/api/requisicoes.ts
-
 import {
   fetchItems,
   fetchSingle,
   createItem,
   updateItem,
 } from "@/src/lib/fetchApi";
+
+import { api } from "@/src/lib/api";
+
 import type {
   CRequisicaoCombustivel,
   CreateRequisicaoDTO,
@@ -35,16 +36,12 @@ export const requisicoesApi = {
       c_requisicao_combustivel: data,
     }),
 
-  /** Exclui */
+  /** Exclui — CORRIGIDO 🔥 */
   delete: async (id: number): Promise<void> => {
-    const res = await fetch(`/api/v1/requisicoes/${id}`, {
-      method: "DELETE",
-    });
+    const res = await api.delete(`/api/v1/requisicoes/${id}`);
 
-    if (!res.ok) {
+    if (!res || res.status !== "success") {
       throw new Error(`Erro ao excluir requisicao (${id})`);
     }
-
-    return;
   },
 };
