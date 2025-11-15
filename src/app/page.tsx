@@ -108,14 +108,6 @@ export default function LoginPage() {
                 {loading ? "Entrando..." : "Entrar"}
               </Button>
             </form>
-
-            {/* MODE DE TESTE — Mantido */}
-            <div className="mt-6 text-center text-sm text-muted-foreground">
-              <p>Contas de teste:</p>
-              <p className="mt-1">
-                posto@nextfuel.com | gestor@nextfuel.com | admin@nextfuel.com
-              </p>
-            </div>
           </CardContent>
         </Card>
       </motion.div>

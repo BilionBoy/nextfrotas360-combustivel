@@ -138,7 +138,7 @@ export default function ValidarRequisicao() {
     }
 
     try {
-      const requisicao = await vouchersApi.validate(codigo, 1); // TODO: substituir 1 pelo ID real do posto logado
+      const requisicao = await vouchersApi.validate(codigo);
       setValidatedReq(requisicao);
       setIsValidated(true);
 
