@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Fuel, Plus } from "lucide-react";
-
+import { Fuel, Plus, CheckCircle, FileDown } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
 import {
   Card,
@@ -19,17 +18,20 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/src/components/ui/dialog";
-
 import { useToast } from "@/src/components/ui/use-toast";
 import { useRouter } from "next/navigation";
 
 import { useRequisicoes } from "./hooks/useRequisicoes";
 import { requisicoesApi } from "./api/requisicoes";
-
-import type { CRequisicaoCombustivel } from "@/src/@types/RequisicaoCombustivel";
-
-import { RequisicoesTable } from "./components/RequisicoesTable";
 import RequisicaoForm from "./components/RequisicaoForm";
+import { RequisicoesTable } from "./components/RequisicoesTable";
+
+import type {
+  CRequisicaoCombustivel,
+  CreateRequisicaoDTO,
+} from "@/src/@types/RequisicaoCombustivel";
+import QRCode from "qrcode";
+import { jsPDF } from "jspdf";
 
 export default function AbastecimentoPage() {
   const router = useRouter();
@@ -41,21 +43,37 @@ export default function AbastecimentoPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editData, setEditData] = useState<CRequisicaoCombustivel | null>(null);
 
+  // success modal data (QR + created requisicao)
+  const [successOpen, setSuccessOpen] = useState(false);
+  const [createdReq, setCreatedReq] = useState<CRequisicaoCombustivel | null>(
+    null
+  );
+  const [qrDataUrl, setQrDataUrl] = useState<string>("");
+
   // ------------------------------------------------------
   // CREATE
   // ------------------------------------------------------
-  async function handleCreate(data: any) {
+  async function handleCreate(payload: CreateRequisicaoDTO) {
     try {
-      await requisicoesApi.create(data);
+      const created = await requisicoesApi.create(payload); // espera o created object
+      // gerar QR (valor: voucher_codigo ou fallback REQ-<id>)
+      const qrValue = created.voucher_codigo || `REQ-${created.id}`;
+      const qrUrl = await QRCode.toDataURL(qrValue);
+
+      setCreatedReq(created);
+      setQrDataUrl(qrUrl);
+
+      // abrir modal de sucesso automaticamente
+      setSuccessOpen(true);
+      setShowCreateModal(false);
+      await refetch();
 
       toast({
         title: "Requisição criada!",
-        description: "A requisição foi registrada com sucesso.",
+        description: "Voucher e QR Code gerados com sucesso.",
       });
-
-      setShowCreateModal(false);
-      await refetch();
     } catch (error) {
+      console.error("[v0] erro create requisicao:", error);
       toast({
         title: "Erro ao criar requisição",
         description: "Não foi possível criar a requisição.",
@@ -65,23 +83,22 @@ export default function AbastecimentoPage() {
   }
 
   // ------------------------------------------------------
-  // EDIT
+  // EDIT SUBMIT
   // ------------------------------------------------------
-  async function handleEditSubmit(data: any) {
+  async function handleEditSubmit(payload: CreateRequisicaoDTO) {
     if (!editData) return;
 
     try {
-      await requisicoesApi.update(editData.id, data);
-
+      await requisicoesApi.update(editData.id, payload);
       toast({
         title: "Alterações salvas!",
         description: "A requisição foi atualizada com sucesso.",
       });
-
       setShowEditModal(false);
       setEditData(null);
       await refetch();
-    } catch {
+    } catch (err) {
+      console.error("[v0] erro editar:", err);
       toast({
         title: "Erro ao atualizar",
         description: "Não foi possível atualizar a requisição.",
@@ -96,14 +113,13 @@ export default function AbastecimentoPage() {
   async function handleDelete(id: number) {
     try {
       await requisicoesApi.delete(id);
-
       toast({
         title: "Requisição removida",
         description: "A requisição foi excluída com sucesso.",
       });
-
       await refetch();
-    } catch {
+    } catch (err) {
+      console.error("[v0] erro delete:", err);
       toast({
         title: "Erro ao excluir",
         description: "Não foi possível excluir a requisição.",
@@ -111,6 +127,48 @@ export default function AbastecimentoPage() {
       });
     }
   }
+
+  // ------------------------------------------------------
+  // PDF download from createdReq + qrDataUrl
+  // ------------------------------------------------------
+  const handleGeneratePDF = () => {
+    if (!createdReq) return;
+    const doc = new jsPDF();
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(18);
+    doc.text("VOUCHER DE ABASTECIMENTO", 105, 18, { align: "center" });
+    doc.setFontSize(12);
+    doc.text(
+      `Código: ${createdReq.voucher_codigo || `REQ-${createdReq.id}`}`,
+      20,
+      36
+    );
+    doc.text(`Posto: ${createdReq.c_posto?.nome_fantasia || "-"}`, 20, 46);
+    doc.text(`Veículo: ${createdReq.g_veiculo?.placa || "-"}`, 20, 56);
+    doc.text(
+      `Combustível: ${createdReq.c_tipo_combustivel?.descricao || "-"}`,
+      20,
+      66
+    );
+    doc.text(`Status: ${createdReq.voucher_status || "-"}`, 20, 76);
+    doc.text(
+      `Validade: ${
+        createdReq.voucher_validade
+          ? new Date(createdReq.voucher_validade).toLocaleString("pt-BR")
+          : "-"
+      }`,
+      20,
+      86
+    );
+
+    if (qrDataUrl) {
+      // add qr image
+      const imgProps = { format: "PNG" as const };
+      doc.addImage(qrDataUrl, "PNG", 75, 100, 60, 60, undefined, "FAST");
+    }
+
+    doc.save(`voucher-${createdReq.voucher_codigo || createdReq.id}.pdf`);
+  };
 
   // ------------------------------------------------------
   // VIEW
@@ -123,7 +181,6 @@ export default function AbastecimentoPage() {
         transition={{ duration: 0.5 }}
         className="max-w-6xl mx-auto"
       >
-        {/* HEADER */}
         <div className="flex items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-4">
             <Button variant="outline" onClick={() => router.back()}>
@@ -141,7 +198,6 @@ export default function AbastecimentoPage() {
           </Button>
         </div>
 
-        {/* TABELA */}
         <Card>
           <CardHeader>
             <CardTitle>Histórico de Requisições</CardTitle>
@@ -156,8 +212,8 @@ export default function AbastecimentoPage() {
             ) : (
               <RequisicoesTable
                 requisicoes={requisicoes}
-                onEdit={(req) => {
-                  setEditData(req);
+                onEdit={(r) => {
+                  setEditData(r);
                   setShowEditModal(true);
                 }}
                 onDelete={handleDelete}
@@ -185,7 +241,13 @@ export default function AbastecimentoPage() {
       </Dialog>
 
       {/* EDIT MODAL */}
-      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+      <Dialog
+        open={showEditModal}
+        onOpenChange={(open) => {
+          if (!open) setEditData(null);
+          setShowEditModal(open);
+        }}
+      >
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -199,6 +261,87 @@ export default function AbastecimentoPage() {
 
           {editData && (
             <RequisicaoForm initial={editData} onSave={handleEditSubmit} />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* SUCCESS MODAL (QR + PDF) */}
+      <Dialog open={successOpen} onOpenChange={setSuccessOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3 text-2xl text-center justify-center">
+              <CheckCircle className="h-8 w-8 text-green-500" />
+              Requisição Gerada!
+            </DialogTitle>
+            <DialogDescription className="text-center">
+              Apresente este QR Code no posto selecionado.
+            </DialogDescription>
+          </DialogHeader>
+
+          {createdReq && (
+            <div className="space-y-6 py-4">
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground mb-2">
+                  Código do Voucher
+                </p>
+                <p className="text-3xl font-bold text-primary tracking-wider">
+                  {createdReq.voucher_codigo || `REQ-${createdReq.id}`}
+                </p>
+              </div>
+
+              {qrDataUrl && (
+                <div className="flex justify-center">
+                  <div className="p-4 bg-white rounded-lg">
+                    <img src={qrDataUrl} alt="QR Code" className="w-48 h-48" />
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Veículo:</span>
+                  <span className="font-medium">
+                    {createdReq.g_veiculo?.placa || "-"}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Posto:</span>
+                  <span className="font-medium">
+                    {createdReq.c_posto?.nome_fantasia || "-"}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Combustível:</span>
+                  <span className="font-medium">
+                    {createdReq.c_tipo_combustivel?.descricao || "-"}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Status:</span>
+                  <span className="font-medium capitalize">
+                    {createdReq.voucher_status || "pendente"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSuccessOpen(false);
+                  }}
+                >
+                  Fechar
+                </Button>
+
+                <Button
+                  onClick={handleGeneratePDF}
+                  className="flex items-center gap-2"
+                >
+                  <FileDown className="w-4 h-4" /> Baixar PDF
+                </Button>
+              </div>
+            </div>
           )}
         </DialogContent>
       </Dialog>
