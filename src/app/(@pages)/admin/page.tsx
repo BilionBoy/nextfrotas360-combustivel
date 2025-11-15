@@ -39,7 +39,10 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+// 🔒 IMPORT DO PROTETOR:
+import { useProtectedRoute } from "@/src/hooks/useProtectedRoute";
 
+// ---- MOCKS (iguais aos seus) ----
 const mockTransacoesData = [
   { mes: "Jul", valor: 45000 },
   { mes: "Ago", valor: 52000 },
@@ -59,6 +62,14 @@ const mockRentabilidadeData = [
 export default function AdminDashboard() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("visao-geral");
+
+  // 🔐 VERIFICA ROLE = "admin"
+  const { authorized } = useProtectedRoute({
+    allowed: ["admin"],
+  });
+
+  // Evita flicker enquanto verifica auth
+  if (!authorized) return null;
 
   return (
     <div className="min-h-screen w-full bg-background">
@@ -332,7 +343,6 @@ export default function AdminDashboard() {
             </Card>
           </TabsContent>
         </Tabs>
-
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

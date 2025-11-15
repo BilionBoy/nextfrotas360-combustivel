@@ -12,6 +12,9 @@ import {
 } from "@/src/components/ui/card";
 import { useRouter } from "next/navigation";
 
+// 🔒 PROTEÇÃO
+import { useProtectedRoute } from "@/src/hooks/useProtectedRoute";
+
 const modules = [
   {
     title: "Meus Veículos",
@@ -45,6 +48,14 @@ const modules = [
 
 export default function GestorDashboard() {
   const router = useRouter();
+
+  // 🔐 Somente gestores podem acessar
+  const { authorized } = useProtectedRoute({
+    allowed: ["gestor"],
+  });
+
+  // evita renderização flickando antes da verificação
+  if (!authorized) return null;
 
   return (
     <div className="min-h-screen w-full bg-background">

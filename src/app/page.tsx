@@ -3,7 +3,6 @@
 import type React from "react";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
@@ -18,30 +17,36 @@ import {
 import { useToast } from "@/src/components/ui/use-toast";
 import { Fuel } from "lucide-react";
 
+import { useAuth } from "@/src/context/AuthContext"; // <— AGORA USANDO O AUTH REAL
+
 export default function LoginPage() {
-  const router = useRouter();
   const { toast } = useToast();
+  const { login, loading } = useAuth(); // <— login REAL vindo do AuthProvider
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleLogin = (e: React.FormEvent) => {
+  // ============================================================
+  // HANDLE LOGIN (CHAMANDO API REAL)
+  // ============================================================
+  async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
 
-    // Mock authentication logic
-    if (email.includes("posto") || email === "posto@nextfuel.com") {
-      router.push("/empresas");
-    } else if (email.includes("gestor") || email === "gestor@nextfuel.com") {
-      router.push("/prefeitura");
-    } else if (email.includes("admin") || email === "admin@nextfuel.com") {
-      router.push("/admin");
-    } else {
+    try {
+      await login(email, password); // <— AQUI FAZ LOGIN REAL
+      // redirecionamento é automático no AuthProvider (por role)
+    } catch (err: any) {
+      console.error("Erro no login:", err);
+
       toast({
         title: "Erro ao fazer login",
-        description: "Email ou senha incorretos.",
+        description: err?.message || "Credenciais inválidas",
         variant: "destructive",
       });
     }
-  };
+  }
+
+  // ==============================================================
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-blue-50 to-blue-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
@@ -65,8 +70,10 @@ export default function LoginPage() {
               </CardDescription>
             </div>
           </CardHeader>
+
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">
+              {/* EMAIL */}
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -78,6 +85,8 @@ export default function LoginPage() {
                   required
                 />
               </div>
+
+              {/* SENHA */}
               <div className="space-y-2">
                 <Label htmlFor="password">Senha</Label>
                 <Input
@@ -89,10 +98,18 @@ export default function LoginPage() {
                   required
                 />
               </div>
-              <Button type="submit" className="w-full h-11 text-base">
-                Entrar
+
+              {/* BOTÃO */}
+              <Button
+                type="submit"
+                className="w-full h-11 text-base"
+                disabled={loading}
+              >
+                {loading ? "Entrando..." : "Entrar"}
               </Button>
             </form>
+
+            {/* MODE DE TESTE — Mantido */}
             <div className="mt-6 text-center text-sm text-muted-foreground">
               <p>Contas de teste:</p>
               <p className="mt-1">
