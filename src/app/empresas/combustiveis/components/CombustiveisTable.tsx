@@ -87,7 +87,8 @@ export function CombustiveisTable({
             >
               <TableCell className="flex items-center gap-2 font-medium">
                 <Fuel className="h-4 w-4 text-primary" />
-                {getTipoNome(c.c_tipo_combustivel_id)}
+                {c.c_tipo_combustivel?.descricao ??
+                  getTipoNome(c.c_tipo_combustivel_id)}
               </TableCell>
 
               <TableCell>
@@ -101,6 +102,7 @@ export function CombustiveisTable({
 
               <TableCell className="text-right flex justify-end gap-2">
                 {/* Editar */}
+
                 <Dialog
                   open={isEditOpen && selectedId === c.id}
                   onOpenChange={(open) => {

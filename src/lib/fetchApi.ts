@@ -70,3 +70,18 @@ export async function updateItem<T>(url: string, payload: any): Promise<T> {
     throw error;
   }
 }
+
+/* Deleta um registro existente */
+export async function deleteItem(url: string): Promise<void> {
+  try {
+    await api.delete(url);
+  } catch (error) {
+    console.error(`[v0] Error deleting ${url}:`, error);
+
+    if (error instanceof AuthError) {
+      throw error;
+    }
+
+    throw error;
+  }
+}
