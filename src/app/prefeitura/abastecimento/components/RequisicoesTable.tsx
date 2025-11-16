@@ -26,12 +26,8 @@ export function RequisicoesTable({ requisicoes, onEdit, onDelete }: Props) {
   const [qrCode, setQrCode] = useState<string>("");
   const [showQrModal, setShowQrModal] = useState(false);
 
-  // REF para print e PDF
   const printRef = useRef<HTMLDivElement | null>(null);
 
-  // ------------------------------------------------------
-  // ABRIR MODAL COM QR CODE
-  // ------------------------------------------------------
   async function openQr(req: CRequisicaoCombustivel) {
     setSelected(req);
 
@@ -46,9 +42,6 @@ export function RequisicoesTable({ requisicoes, onEdit, onDelete }: Props) {
     setShowQrModal(true);
   }
 
-  // ------------------------------------------------------
-  // IMPRIMIR
-  // ------------------------------------------------------
   function handlePrint() {
     if (!printRef.current) return;
 
@@ -64,7 +57,6 @@ export function RequisicoesTable({ requisicoes, onEdit, onDelete }: Props) {
           <style>
             body { font-family: Arial; padding: 20px; }
             img { max-width: 200px; display: block; margin: auto; }
-            .center { text-align: center; }
           </style>
         </head>
         <body>${content}</body>
@@ -77,9 +69,6 @@ export function RequisicoesTable({ requisicoes, onEdit, onDelete }: Props) {
     printWindow.close();
   }
 
-  // ------------------------------------------------------
-  // DOWNLOAD PDF
-  // ------------------------------------------------------
   async function handleDownloadPDF() {
     if (!printRef.current) return;
 
@@ -97,9 +86,6 @@ export function RequisicoesTable({ requisicoes, onEdit, onDelete }: Props) {
     pdf.save(`voucher_${selected?.voucher_codigo}.pdf`);
   }
 
-  // ======================================================
-  // TABELA
-  // ======================================================
   if (requisicoes.length === 0)
     return (
       <div className="text-center py-8 text-muted-foreground">
@@ -142,7 +128,6 @@ export function RequisicoesTable({ requisicoes, onEdit, onDelete }: Props) {
 
                 <td className="p-3">
                   <div className="flex justify-center gap-2">
-                    {/* Ver QR */}
                     <Button
                       variant="ghost"
                       size="icon"
@@ -151,7 +136,6 @@ export function RequisicoesTable({ requisicoes, onEdit, onDelete }: Props) {
                       <Eye className="h-4 w-4 text-blue-600" />
                     </Button>
 
-                    {/* Editar */}
                     <Button
                       variant="ghost"
                       size="icon"
@@ -160,7 +144,6 @@ export function RequisicoesTable({ requisicoes, onEdit, onDelete }: Props) {
                       <Pencil className="h-4 w-4" />
                     </Button>
 
-                    {/* Excluir */}
                     <Button
                       variant="ghost"
                       size="icon"
@@ -176,9 +159,6 @@ export function RequisicoesTable({ requisicoes, onEdit, onDelete }: Props) {
         </table>
       </div>
 
-      {/* ======================================================
-          MODAL QR CODE + PRINT + PDF
-      ====================================================== */}
       <Dialog open={showQrModal} onOpenChange={setShowQrModal}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -187,7 +167,6 @@ export function RequisicoesTable({ requisicoes, onEdit, onDelete }: Props) {
 
           {selected && (
             <div className="flex flex-col items-center gap-4 py-4">
-              {/* ====== CONTEÚDO DO MODAL PARA PRINT/PDF ====== */}
               <div
                 ref={printRef}
                 style={{
@@ -196,28 +175,26 @@ export function RequisicoesTable({ requisicoes, onEdit, onDelete }: Props) {
                   padding: "20px",
                   borderRadius: "8px",
                   width: "100%",
-                  WebkitPrintColorAdjust: "exact",
-                  printColorAdjust: "exact",
                 }}
               >
-                {/* QR */}
                 <img
                   src={qrCode}
                   className="w-48 h-48 border p-2 rounded-lg bg-white"
                 />
 
-                {/* CÓDIGO */}
                 <p className="text-lg font-semibold tracking-widest">
                   {selected.voucher_codigo}
                 </p>
 
-                {/* VALIDADE */}
                 <p className="text-sm" style={{ color: "#555" }}>
                   Validade:{" "}
-                  {new Date(selected.voucher_validade!).toLocaleString("pt-BR")}
+                  {selected.voucher_validade
+                    ? new Date(selected.voucher_validade).toLocaleString(
+                        "pt-BR"
+                      )
+                    : "-"}
                 </p>
 
-                {/* Detalhes */}
                 <div
                   className="w-full text-sm mt-2 border-t pt-3 space-y-1"
                   style={{ borderColor: "#ddd" }}
@@ -235,7 +212,6 @@ export function RequisicoesTable({ requisicoes, onEdit, onDelete }: Props) {
                 </div>
               </div>
 
-              {/* ====== BOTÕES ====== */}
               <div className="flex gap-3 mt-4">
                 <Button
                   onClick={handlePrint}

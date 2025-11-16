@@ -21,10 +21,12 @@ import type {
 import type { GVeiculo } from "@/src/@types/Veiculo";
 import type { CPosto } from "@/src/@types/Posto";
 import type { CTipoCombustivel } from "@/src/@types/TipoCombustivel";
+import type { GCentroCusto } from "@/src/@types/CentroCusto";
 
 import { veiculosApi } from "../api/veiculos";
 import { postosApi } from "../api/postos";
 import { tiposCombustivelApi } from "../api/tiposCombustivel";
+import { centrosCustoApi } from "../api/centrosCusto";
 
 interface Props {
   initial?: CRequisicaoCombustivel | null;
@@ -35,12 +37,13 @@ function RequisicaoForm({ initial, onSave }: Props) {
   const [veiculos, setVeiculos] = useState<GVeiculo[]>([]);
   const [postos, setPostos] = useState<CPosto[]>([]);
   const [tipos, setTipos] = useState<CTipoCombustivel[]>([]);
+  const [centros, setCentros] = useState<GCentroCusto[]>([]);
 
   const [form, setForm] = useState({
     g_veiculo_id: initial?.g_veiculo?.id?.toString() || "",
     c_posto_id: initial?.c_posto?.id?.toString() || "",
-    c_tipo_combustivel_id:
-      initial?.c_tipo_combustivel?.id?.toString() || "",
+    c_tipo_combustivel_id: initial?.c_tipo_combustivel?.id?.toString() || "",
+    g_centro_custo_id: initial?.g_centro_custo?.id?.toString() || "",
     km_atual: initial?.km_atual?.toString() || "",
     destino: initial?.destino || "",
     quantidade_litros: initial?.quantidade_litros?.toString() || "",
@@ -49,15 +52,24 @@ function RequisicaoForm({ initial, onSave }: Props) {
 
   useEffect(() => {
     async function loadData() {
-      const [v, p, t] = await Promise.all([
+      const [v, p, t, cc] = await Promise.all([
         veiculosApi.getAll().catch(() => []),
         postosApi.getAll().catch(() => []),
         tiposCombustivelApi.getAll().catch(() => []),
+        centrosCustoApi.getAll().catch(() => []),
       ]);
 
       setVeiculos(v);
       setPostos(p);
       setTipos(t);
+      setCentros(cc);
+
+      if (cc.length === 1) {
+        setForm((prev) => ({
+          ...prev,
+          g_centro_custo_id: cc[0].id.toString(),
+        }));
+      }
     }
 
     loadData();
@@ -74,6 +86,7 @@ function RequisicaoForm({ initial, onSave }: Props) {
       g_veiculo_id: Number(form.g_veiculo_id),
       c_posto_id: Number(form.c_posto_id),
       c_tipo_combustivel_id: Number(form.c_tipo_combustivel_id),
+      g_centro_custo_id: Number(form.g_centro_custo_id),
       km_atual: form.km_atual ? Number(form.km_atual) : undefined,
       destino: form.destino || undefined,
       quantidade_litros: form.quantidade_litros
@@ -85,10 +98,8 @@ function RequisicaoForm({ initial, onSave }: Props) {
 
   return (
     <form className="space-y-4" onSubmit={submit}>
-      {/* GRID */}
       <div className="grid grid-cols-2 gap-4">
-        
-        {/* Veículo */}
+        {/* VEÍCULO */}
         <div className="space-y-1">
           <Label>Veículo</Label>
           <Select
@@ -109,7 +120,7 @@ function RequisicaoForm({ initial, onSave }: Props) {
           </Select>
         </div>
 
-        {/* Posto */}
+        {/* POSTO */}
         <div className="space-y-1">
           <Label>Posto</Label>
           <Select
@@ -130,14 +141,12 @@ function RequisicaoForm({ initial, onSave }: Props) {
           </Select>
         </div>
 
-        {/* Tipo de combustível */}
+        {/* COMBUSTÍVEL */}
         <div className="space-y-1">
           <Label>Combustível</Label>
           <Select
             value={form.c_tipo_combustivel_id}
-            onValueChange={(v) =>
-              handleChange("c_tipo_combustivel_id", v)
-            }
+            onValueChange={(v) => handleChange("c_tipo_combustivel_id", v)}
             required
           >
             <SelectTrigger>
@@ -153,51 +162,68 @@ function RequisicaoForm({ initial, onSave }: Props) {
           </Select>
         </div>
 
-        {/* KM Atual */}
+        {/* CENTRO DE CUSTO */}
+        <div className="space-y-1">
+          <Label>Centro de Custo</Label>
+          <Select
+            value={form.g_centro_custo_id}
+            onValueChange={(v) => handleChange("g_centro_custo_id", v)}
+            required
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione o centro de custo" />
+            </SelectTrigger>
+            <SelectContent>
+              {centros.map((c) => (
+                <SelectItem key={c.id} value={c.id.toString()}>
+                  {c.nome} — Saldo: R$ {Number(c.saldo_atual).toFixed(2)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* KM */}
         <div className="space-y-1">
           <Label>KM Atual</Label>
           <Input
             value={form.km_atual}
             onChange={(e) => handleChange("km_atual", e.target.value)}
-            placeholder="Ex: 12450"
+            placeholder="Ex: 15000"
             type="number"
           />
         </div>
 
-        {/* Destino */}
+        {/* DESTINO */}
         <div className="col-span-2 space-y-1">
           <Label>Destino</Label>
           <Input
             value={form.destino}
             onChange={(e) => handleChange("destino", e.target.value)}
-            placeholder="Ex: Centro da cidade"
+            placeholder="Ex: Bairro X"
           />
         </div>
 
-        {/* Litros */}
+        {/* LITROS */}
         <div className="space-y-1">
-          <Label>Litros</Label>
+          <Label>Quantidade de Litros</Label>
           <Input
             value={form.quantidade_litros}
-            onChange={(e) =>
-              handleChange("quantidade_litros", e.target.value)
-            }
-            placeholder="Ex: 30.5"
+            onChange={(e) => handleChange("quantidade_litros", e.target.value)}
+            placeholder="Ex: 25.5"
             type="number"
             disabled={form.completar_tanque}
           />
         </div>
 
-        {/* Completar tanque */}
+        {/* COMPLETAR TANQUE */}
         <div className="flex items-end gap-2">
           <input
             type="checkbox"
             checked={form.completar_tanque}
-            onChange={(e) =>
-              handleChange("completar_tanque", e.target.checked)
-            }
+            onChange={(e) => handleChange("completar_tanque", e.target.checked)}
           />
-          <Label>Completar tanque</Label>
+          <Label>Completar Tanque</Label>
         </div>
       </div>
 
