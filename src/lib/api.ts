@@ -1,6 +1,6 @@
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
-type HttpMethod = "GET" | "POST" | "PUT" | "DELETE";
+type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 interface RequestOptions {
   method?: HttpMethod;
@@ -126,6 +126,8 @@ export const api = {
   postRaw: (endpoint: string, body: any) => requestRaw(endpoint, body),
   put: <T = any>(endpoint: string, body: any) =>
     request<T>(endpoint, { method: "PUT", body }),
+  patch: <T = any>(endpoint: string, body: any) =>
+    request<T>(endpoint, { method: "PATCH", body }),
   delete: <T = any>(endpoint: string) =>
     request<T>(endpoint, { method: "DELETE" }),
 };

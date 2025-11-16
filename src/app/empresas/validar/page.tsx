@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import {
   QrCode,
@@ -9,11 +9,16 @@ import {
   Fuel,
   Droplet,
   Milestone,
+  Car,
+  MapPin,
+  Tag,
 } from "lucide-react";
+
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { useToast } from "@/src/components/ui/use-toast";
 import { useRouter } from "next/navigation";
+
 import {
   Dialog,
   DialogContent,
@@ -22,7 +27,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/src/components/ui/dialog";
-import { jsPDF } from "jspdf";
+
 import { vouchersApi } from "./api/vouchers";
 import type { CRequisicaoCombustivel } from "@/src/@types/RequisicaoCombustivel";
 
@@ -31,264 +36,284 @@ export default function ValidarRequisicao() {
   const router = useRouter();
 
   const [codigo, setCodigo] = useState("");
-  const [isValidated, setIsValidated] = useState(false);
-  const [validatedReq, setValidatedReq] =
-    useState<CRequisicaoCombustivel | null>(null);
+  const [step, setStep] = useState<"search" | "fill" | "final">("search");
 
-  // ----------------------------------------------------------------
-  // 🧾 Gerar comprovante PDF após validação
-  // ----------------------------------------------------------------
-  const generatePDF = (req: CRequisicaoCombustivel) => {
-    const doc = new jsPDF();
-    const now = new Date();
+  const [req, setReq] = useState<CRequisicaoCombustivel | null>(null);
 
-    doc.setFontSize(22);
-    doc.setFont("helvetica", "bold");
-    doc.text("NEXTFUEL360", doc.internal.pageSize.getWidth() / 2, 20, {
-      align: "center",
-    });
+  const [litros, setLitros] = useState("");
+  const [total, setTotal] = useState("");
 
-    doc.setFontSize(18);
-    doc.setFont("helvetica", "normal");
-    doc.text(
-      "Comprovante de Abastecimento",
-      doc.internal.pageSize.getWidth() / 2,
-      30,
-      {
-        align: "center",
-      }
-    );
+  // ============================================================
+  // PREÇO POR LITRO (instantâneo)
+  // ============================================================
+  const preco_por_litro = useMemo(() => {
+    const l = Number(litros);
+    const t = Number(total);
+    if (l <= 0 || t <= 0) return 0;
+    return t / l;
+  }, [litros, total]);
 
-    doc.line(20, 35, doc.internal.pageSize.getWidth() - 20, 35);
-
-    doc.setFontSize(12);
-    const startY = 50;
-    const lineHeight = 10;
-
-    doc.setFont("helvetica", "bold");
-    doc.text("Código do Voucher:", 20, startY);
-    doc.setFont("helvetica", "normal");
-    doc.text(req.voucher_codigo || "-", 80, startY);
-
-    doc.setFont("helvetica", "bold");
-    doc.text("Data e Hora:", 20, startY + lineHeight);
-    doc.setFont("helvetica", "normal");
-    doc.text(now.toLocaleString("pt-BR"), 80, startY + lineHeight);
-
-    doc.setFont("helvetica", "bold");
-    doc.text("Veículo:", 20, startY + lineHeight * 2);
-    doc.setFont("helvetica", "normal");
-    doc.text(req.g_veiculo?.placa || "-", 80, startY + lineHeight * 2);
-
-    doc.setFont("helvetica", "bold");
-    doc.text("Posto:", 20, startY + lineHeight * 3);
-    doc.setFont("helvetica", "normal");
-    doc.text(req.c_posto?.nome_fantasia || "-", 80, startY + lineHeight * 3);
-
-    doc.setFont("helvetica", "bold");
-    doc.text("Combustível:", 20, startY + lineHeight * 4);
-    doc.setFont("helvetica", "normal");
-    doc.text(
-      req.c_tipo_combustivel?.descricao || "-",
-      80,
-      startY + lineHeight * 4
-    );
-
-    doc.setFont("helvetica", "bold");
-    doc.text("Status:", 20, startY + lineHeight * 5);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(34, 139, 34);
-    doc.text("VALIDADO E CONCLUÍDO", 80, startY + lineHeight * 5);
-    doc.setTextColor(0, 0, 0);
-
-    doc.line(
-      20,
-      doc.internal.pageSize.getHeight() - 40,
-      doc.internal.pageSize.getWidth() - 20,
-      doc.internal.pageSize.getHeight() - 40
-    );
-    doc.setFontSize(10);
-    doc.text(
-      "Assinatura do Frentista",
-      doc.internal.pageSize.getWidth() / 4,
-      doc.internal.pageSize.getHeight() - 30,
-      { align: "center" }
-    );
-    doc.text(
-      "Assinatura do Motorista",
-      (doc.internal.pageSize.getWidth() / 4) * 3,
-      doc.internal.pageSize.getHeight() - 30,
-      { align: "center" }
-    );
-
-    doc.save(`comprovante-${req.voucher_codigo || "voucher"}.pdf`);
-  };
-
-  // ----------------------------------------------------------------
-  // 🔍 Validação do voucher via API Rails
-  // ----------------------------------------------------------------
-  const handleValidation = async () => {
+  // ============================================================
+  // STEP 1 — Buscar voucher
+  // ============================================================
+  const buscarVoucher = async () => {
     if (!codigo.trim()) {
-      toast({
+      return toast({
         title: "Código obrigatório",
-        description: "Digite o código do voucher para validar.",
+        description: "Digite o código do voucher.",
         variant: "destructive",
       });
-      return;
     }
 
     try {
-      const requisicao = await vouchersApi.validate(codigo);
-      setValidatedReq(requisicao);
-      setIsValidated(true);
+      const data = await vouchersApi.find(codigo);
+      setReq(data);
+      setStep("fill");
 
       toast({
-        title: "Voucher válido!",
-        description: "Abastecimento autorizado com sucesso.",
+        title: "Voucher encontrado!",
+        description: "Preencha os dados do abastecimento.",
       });
-    } catch (error: any) {
-      console.error("Erro na validação do voucher:", error);
+    } catch (err: any) {
       toast({
-        title: "Falha na validação",
-        description: error.message || "Não foi possível validar o voucher.",
+        title: "Erro",
+        description: err.message || "Voucher não encontrado.",
         variant: "destructive",
       });
     }
   };
 
-  // ----------------------------------------------------------------
-  // ✅ Confirmar e gerar comprovante
-  // ----------------------------------------------------------------
-  const confirmAndFinalize = () => {
-    if (!validatedReq) return;
+  // ============================================================
+  // STEP 2 — Validar com litros + total
+  // ============================================================
+  const validar = async () => {
+    if (!litros || !total || Number(litros) <= 0 || Number(total) <= 0) {
+      return toast({
+        title: "Dados inválidos",
+        description: "Preencha litros e total corretamente.",
+        variant: "destructive",
+      });
+    }
 
-    toast({
-      title: "Requisição concluída!",
-      description: "O download do comprovante começará em instantes.",
-    });
+    if (!req) return;
 
-    generatePDF(validatedReq);
-    setIsValidated(false);
-    setValidatedReq(null);
+    try {
+      const updated = await vouchersApi.validate(
+        req.id,
+        Number(litros),
+        Number(total)
+      );
+
+      setReq(updated);
+      setStep("final");
+
+      toast({
+        title: "Abastecimento validado!",
+        description: "Requisição concluída com sucesso.",
+      });
+    } catch (err: any) {
+      toast({
+        title: "Erro ao validar",
+        description: err.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  // ============================================================
+  // STEP 3 — Final
+  // ============================================================
+  const concluir = () => {
+    setStep("search");
     setCodigo("");
+    setLitros("");
+    setTotal("");
+    setReq(null);
   };
 
-  const handleScan = () => {
-    toast({
-      title: "Leitor de QR Code",
-      description:
-        "Funcionalidade de câmera não implementada. Por favor, insira o código manualmente.",
-    });
-  };
-
-  // ----------------------------------------------------------------
-  // 🖼️ Renderização
-  // ----------------------------------------------------------------
   return (
-    <div className="min-h-screen w-full bg-background p-4 md:p-8 flex items-center justify-center">
+    <div className="min-h-screen w-full bg-background p-6 flex items-center justify-center">
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-2xl"
+        transition={{ duration: 0.4 }}
+        className="w-full max-w-xl"
       >
-        <div className="absolute top-4 left-4">
-          <Button variant="outline" onClick={() => router.push("/empresas")}>
-            Voltar
-          </Button>
-        </div>
+        <Button variant="outline" onClick={() => router.push("/empresas")}>
+          Voltar
+        </Button>
 
-        <div className="bg-card border border-border rounded-lg shadow-xl p-6 md:p-10 text-center">
-          <QrCode className="h-20 w-20 text-primary mx-auto mb-6" />
-          <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-            Validar Voucher
-          </h1>
-          <p className="text-muted-foreground mb-8">
-            Insira o código numérico ou escaneie o QR Code para autorizar o
-            abastecimento.
+        <div className="bg-card border border-border rounded-xl shadow-lg p-8 mt-6 text-center">
+          <QrCode className="h-16 w-16 text-primary mx-auto mb-4" />
+
+          <h1 className="text-3xl font-bold mb-2">Validação de Voucher</h1>
+          <p className="text-muted-foreground mb-6">
+            Insira o código ou escaneie o QR Code.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-2 mb-6">
-            <Input
-              placeholder="Insira o código aqui... (ex: A7F9-29QK-4C1M)"
-              className="text-center sm:text-left h-12 text-lg flex-grow"
-              value={codigo}
-              onChange={(e) => setCodigo(e.target.value.toUpperCase())}
-            />
-            <Button onClick={handleValidation} className="h-12 text-lg">
-              <CheckCircle className="mr-2 h-5 w-5" /> Validar
-            </Button>
-          </div>
+          {/* STEP 1 — Buscar voucher */}
+          {step === "search" && (
+            <>
+              <Input
+                placeholder="Ex: A7F9-29QK-4C1M"
+                value={codigo}
+                className="text-lg text-center h-12"
+                onChange={(e) => setCodigo(e.target.value.toUpperCase())}
+              />
 
-          <div className="relative flex py-5 items-center">
-            <div className="flex-grow border-t border-border"></div>
-            <span className="flex-shrink mx-4 text-muted-foreground">OU</span>
-            <div className="flex-grow border-t border-border"></div>
-          </div>
+              <Button
+                className="w-full mt-4 h-12 text-lg"
+                onClick={buscarVoucher}
+              >
+                Validar Código
+              </Button>
 
-          <Button
-            variant="secondary"
-            onClick={handleScan}
-            className="w-full h-16 text-lg"
-          >
-            <ScanLine className="mr-3 h-7 w-7" /> Escanear QR Code
-          </Button>
-        </div>
-      </motion.div>
-
-      <Dialog open={isValidated} onOpenChange={() => setIsValidated(false)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-3 text-2xl">
-              <CheckCircle className="h-8 w-8 text-green-500" />
-              Voucher Validado!
-            </DialogTitle>
-            <DialogDescription>
-              Confira os detalhes e confirme o abastecimento.
-            </DialogDescription>
-          </DialogHeader>
-
-          {validatedReq && (
-            <div className="my-4 space-y-4">
-              <div className="flex justify-between items-center bg-muted/50 p-3 rounded-lg">
-                <span className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                  <Fuel /> Combustível
-                </span>
-                <span className="font-bold text-lg">
-                  {validatedReq.c_tipo_combustivel?.descricao}
-                </span>
-              </div>
-
-              <div className="flex justify-between items-center bg-muted/50 p-3 rounded-lg">
-                <span className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                  <Milestone /> Status
-                </span>
-                <span className="font-bold text-lg text-green-600 capitalize">
-                  {validatedReq.voucher_status}
-                </span>
-              </div>
-
-              {validatedReq.valor_total_formatado && (
-                <div className="flex justify-between items-center bg-primary/10 p-4 rounded-lg border border-primary/50">
-                  <span className="text-md font-bold text-primary flex items-center gap-2">
-                    <Droplet /> Valor total
-                  </span>
-                  <span className="font-extrabold text-2xl text-primary">
-                    {validatedReq.valor_total_formatado}
-                  </span>
-                </div>
-              )}
-            </div>
+              <Button
+                variant="secondary"
+                className="w-full mt-3 h-12"
+                onClick={() =>
+                  toast({
+                    title: "QR Code",
+                    description:
+                      "Leitor não implementado. Use o código manualmente.",
+                  })
+                }
+              >
+                <ScanLine className="mr-2" /> Escanear QR Code
+              </Button>
+            </>
           )}
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsValidated(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={confirmAndFinalize}>Confirmar e Gerar PDF</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          {/* STEP 2 — Preencher litros e total */}
+          {step === "fill" && req && (
+            <Dialog open={true}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle className="text-xl flex items-center gap-2">
+                    <Fuel /> Dados do Abastecimento
+                  </DialogTitle>
+                  <DialogDescription>
+                    Voucher encontrado. Preencha as informações abaixo.
+                  </DialogDescription>
+                </DialogHeader>
+
+                {/* CARD DO VOUCHER */}
+                <div className="bg-muted/40 border border-border rounded-lg p-4 mt-3 mb-4 space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground flex items-center gap-1">
+                      <Tag size={14} /> Voucher
+                    </span>
+                    <span className="font-bold">{req.voucher_codigo}</span>
+                  </div>
+
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground flex items-center gap-1">
+                      <Car size={14} /> Veículo
+                    </span>
+                    <span className="font-medium">
+                      {req.g_veiculo?.placa || "-"}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground flex items-center gap-1">
+                      <MapPin size={14} /> Posto
+                    </span>
+                    <span className="font-medium">
+                      {req.c_posto?.nome_fantasia || "-"}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground flex items-center gap-1">
+                      <Droplet size={14} /> Combustível
+                    </span>
+                    <span className="font-medium">
+                      {req.c_tipo_combustivel?.descricao}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <span className="text-sm text-muted-foreground">
+                      Litros abastecidos
+                    </span>
+                    <Input
+                      type="number"
+                      value={litros}
+                      onChange={(e) => setLitros(e.target.value)}
+                      placeholder="Ex: 23.5"
+                    />
+                  </div>
+
+                  <div>
+                    <span className="text-sm text-muted-foreground">
+                      Valor total (R$)
+                    </span>
+                    <Input
+                      type="number"
+                      value={total}
+                      onChange={(e) => setTotal(e.target.value)}
+                      placeholder="Ex: 140.00"
+                    />
+                  </div>
+
+                  {/* PREÇO POR LITRO */}
+                  <div className="bg-primary/10 p-3 rounded-lg border border-primary/40 text-center">
+                    <span className="text-sm text-muted-foreground">
+                      Preço por litro
+                    </span>
+                    <p className="text-2xl font-bold text-primary mt-1">
+                      R$ {preco_por_litro.toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setStep("search")}>
+                    Cancelar
+                  </Button>
+                  <Button onClick={validar}>Validar Abastecimento</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
+
+          {/* STEP 3 — Final */}
+          {step === "final" && req && (
+            <Dialog open={true}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2 text-xl">
+                    <CheckCircle className="text-green-600" /> Voucher Validado!
+                  </DialogTitle>
+                  <DialogDescription>
+                    Abastecimento concluído com sucesso.
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="bg-primary/10 p-4 rounded-lg mt-4 space-y-2 border border-primary/30">
+                  <p className="font-semibold">
+                    Litros: {req.quantidade_litros_formatado}
+                  </p>
+                  <p className="font-semibold">
+                    Total: {req.valor_total_formatado}
+                  </p>
+                  <p className="font-semibold">
+                    Preço/Litro: R${" "}
+                    {(Number(req.preco_unitario) || 0).toFixed(2)}
+                  </p>
+                </div>
+
+                <DialogFooter>
+                  <Button onClick={concluir}>Concluir</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
+        </div>
+      </motion.div>
     </div>
   );
 }

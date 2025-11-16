@@ -97,17 +97,17 @@ function RequisicaoForm({ initial, onSave }: Props) {
   };
 
   return (
-    <form className="space-y-4" onSubmit={submit}>
-      <div className="grid grid-cols-2 gap-4">
+    <form className="space-y-6 p-1" onSubmit={submit}>
+      <div className="grid grid-cols-2 gap-6">
         {/* VEÍCULO */}
-        <div className="space-y-1">
-          <Label>Veículo</Label>
+        <div className="flex flex-col gap-1.5">
+          <Label className="text-sm text-muted-foreground">Veículo</Label>
           <Select
             value={form.g_veiculo_id}
             onValueChange={(v) => handleChange("g_veiculo_id", v)}
             required
           >
-            <SelectTrigger>
+            <SelectTrigger className="h-11 rounded-md shadow-sm">
               <SelectValue placeholder="Selecione o veículo" />
             </SelectTrigger>
             <SelectContent>
@@ -121,14 +121,14 @@ function RequisicaoForm({ initial, onSave }: Props) {
         </div>
 
         {/* POSTO */}
-        <div className="space-y-1">
-          <Label>Posto</Label>
+        <div className="flex flex-col gap-1.5">
+          <Label className="text-sm text-muted-foreground">Posto</Label>
           <Select
             value={form.c_posto_id}
             onValueChange={(v) => handleChange("c_posto_id", v)}
             required
           >
-            <SelectTrigger>
+            <SelectTrigger className="h-11 rounded-md shadow-sm">
               <SelectValue placeholder="Selecione o posto" />
             </SelectTrigger>
             <SelectContent>
@@ -142,14 +142,14 @@ function RequisicaoForm({ initial, onSave }: Props) {
         </div>
 
         {/* COMBUSTÍVEL */}
-        <div className="space-y-1">
-          <Label>Combustível</Label>
+        <div className="flex flex-col gap-1.5">
+          <Label className="text-sm text-muted-foreground">Combustível</Label>
           <Select
             value={form.c_tipo_combustivel_id}
             onValueChange={(v) => handleChange("c_tipo_combustivel_id", v)}
             required
           >
-            <SelectTrigger>
+            <SelectTrigger className="h-11 rounded-md shadow-sm">
               <SelectValue placeholder="Selecione o combustível" />
             </SelectTrigger>
             <SelectContent>
@@ -162,57 +162,63 @@ function RequisicaoForm({ initial, onSave }: Props) {
           </Select>
         </div>
 
+        {/* KM */}
+        <div className="flex flex-col gap-1.5">
+          <Label className="text-sm text-muted-foreground">KM Atual</Label>
+          <Input
+            value={form.km_atual}
+            onChange={(e) => handleChange("km_atual", e.target.value)}
+            type="number"
+            placeholder="Ex: 15000"
+            className="h-11"
+          />
+        </div>
         {/* CENTRO DE CUSTO */}
-        <div className="space-y-1">
-          <Label>Centro de Custo</Label>
+        <div className="flex flex-col gap-1.5 col-span-2">
+          <Label className="text-sm text-muted-foreground">
+            Centro de Custo
+          </Label>
           <Select
             value={form.g_centro_custo_id}
             onValueChange={(v) => handleChange("g_centro_custo_id", v)}
             required
           >
-            <SelectTrigger>
+            <SelectTrigger className="h-11 rounded-md shadow-sm">
               <SelectValue placeholder="Selecione o centro de custo" />
             </SelectTrigger>
             <SelectContent>
               {centros.map((c) => (
                 <SelectItem key={c.id} value={c.id.toString()}>
-                  {c.nome} — Saldo: R$ {Number(c.saldo_atual).toFixed(2)}
+                  {c.nome} — Saldo R$ {Number(c.saldo_atual).toFixed(2)}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
 
-        {/* KM */}
-        <div className="space-y-1">
-          <Label>KM Atual</Label>
-          <Input
-            value={form.km_atual}
-            onChange={(e) => handleChange("km_atual", e.target.value)}
-            placeholder="Ex: 15000"
-            type="number"
-          />
-        </div>
-
         {/* DESTINO */}
-        <div className="col-span-2 space-y-1">
-          <Label>Destino</Label>
+        <div className="col-span-2 flex flex-col gap-1.5">
+          <Label className="text-sm text-muted-foreground">Destino</Label>
           <Input
             value={form.destino}
             onChange={(e) => handleChange("destino", e.target.value)}
             placeholder="Ex: Bairro X"
+            className="h-11"
           />
         </div>
 
         {/* LITROS */}
-        <div className="space-y-1">
-          <Label>Quantidade de Litros</Label>
+        <div className="flex flex-col gap-1.5">
+          <Label className="text-sm text-muted-foreground">
+            Quantidade de Litros
+          </Label>
           <Input
             value={form.quantidade_litros}
             onChange={(e) => handleChange("quantidade_litros", e.target.value)}
-            placeholder="Ex: 25.5"
             type="number"
             disabled={form.completar_tanque}
+            placeholder="Ex: 25.5"
+            className="h-11"
           />
         </div>
 
@@ -222,12 +228,19 @@ function RequisicaoForm({ initial, onSave }: Props) {
             type="checkbox"
             checked={form.completar_tanque}
             onChange={(e) => handleChange("completar_tanque", e.target.checked)}
+            className="h-4 w-4 accent-primary"
           />
-          <Label>Completar Tanque</Label>
+          <Label className="text-sm text-muted-foreground">
+            Completar Tanque
+          </Label>
         </div>
       </div>
 
-      <Button type="submit" className="w-full">
+      {/* BOTÃO */}
+      <Button
+        type="submit"
+        className="w-full h-11 text-base font-medium shadow-md hover:opacity-90"
+      >
         Salvar
       </Button>
     </form>
